@@ -40,7 +40,7 @@ namespace ApiInterface.Parser
      * Elimina Espacios en blanco extra, tabs y newlines
      */
     public static List<string> AddSentences(string script)
-    { 
+    {
       // Este patron separa por ;, ignorando los espacios en blanco alrededor
       string pattern = @"\s*;\s*";
       string[] sentences = Regex.Split(script.Trim(), pattern);
@@ -59,9 +59,26 @@ namespace ApiInterface.Parser
      * TODO: (2)
      * Esta funcion se encarga de chequear los parentesis 
      */
-    private static bool HasCorrectParenthesis(string sentence)
+    public static bool HasCorrectParenthesis(string sentence)
     {
-      return true;
+      Stack<char> openParenthesis = new();
+
+      foreach (char character in sentence)
+      {
+        if (character == '(')
+        {
+          openParenthesis.Push(character);
+        } else if (character == ')')
+        {
+          if (openParenthesis.Count == 0)
+          {
+            return false;
+          }
+          char head = openParenthesis.Pop();
+        }
+      }
+
+      return openParenthesis.Count == 0;
     }
 
     /*
@@ -70,7 +87,7 @@ namespace ApiInterface.Parser
      */
     private static void Parse(string sentence)
     {
-
+      
     }
 
   }
