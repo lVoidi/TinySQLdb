@@ -1,7 +1,5 @@
 /*
  * TODO: 
- *    (1) Completar la funcion para definir los comandos
- *    (2) Completar la funcion que compruebe los parentesis 
  *    (3) Completar la funcion que haga el parse de cada comando individual
  */
 using System.Text.RegularExpressions;
@@ -17,7 +15,7 @@ namespace ApiInterface.Parser
     public static OperationStatus Execute(string script)
     {
       Sentences = AddSentences(script);
-
+      OperationStatus result = OperationStatus.Success;
       if (Sentences.Count == 0)
       {
         return OperationStatus.Error;
@@ -29,13 +27,17 @@ namespace ApiInterface.Parser
         {
           return OperationStatus.Error;
         }
+        result = Parse(Sentence);
+        if (result == OperationStatus.Warning || result == OperationStatus.Error)
+        {
+          return result;
+        }
       }
 
-      return OperationStatus.Success;
+      return result;
     }
 
     /*
-     * TODO: (1)
      * Este es el que separa las lineas de codigo por puntos y comas
      * Elimina Espacios en blanco extra, tabs y newlines
      */
@@ -56,7 +58,6 @@ namespace ApiInterface.Parser
     }
 
     /*
-     * TODO: (2)
      * Esta funcion se encarga de chequear los parentesis 
      */
     public static bool HasCorrectParenthesis(string sentence)
@@ -84,10 +85,20 @@ namespace ApiInterface.Parser
     /*
      * TODO: (3)
      * Esta funcion se va a encargar de ver que comando sql se va a ejecutar
+     * Se encarga de guardar en Data la base de datos en el instante
      */
-    private static void Parse(string sentence)
+    private static OperationStatus Parse(string sentence)
     {
-      
+      sentence = sentence.ToUpper();
+      if (sentence.StartsWith("CREATE DATABASE")){}
+      else if (sentence.StartsWith("SET DATABASE")){}
+      else if (sentence.StartsWith("CREATE TABLE")){}
+      else if (sentence.StartsWith("CREATE INDEX")){}
+      else if (sentence.StartsWith("INSERT")){}
+      else if (sentence.StartsWith("SELECT")){}
+      else if (sentence.StartsWith("DELETE")){}
+      else if (sentence.StartsWith("UPDATE SET")){}
+      return OperationStatus.Success; 
     }
 
   }
