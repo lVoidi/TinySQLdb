@@ -84,7 +84,13 @@ namespace ApiInterface
     {
       throw new NotImplementedException();
     }
-
-
+  }
+  public class Program
+  {
+    public static void Main(string[] args)
+    {
+    }
   }
 }
+
+
