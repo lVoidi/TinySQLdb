@@ -59,7 +59,7 @@ namespace ApiInterface.Parser
 
     private static string RemoveExtraWhitespaces(string sentence)
     {
-        return Regex.Replace(sentence, @"\s+", " ");
+      return Regex.Replace(sentence, @"\s+", " ");
     }
 
     /*
@@ -108,8 +108,8 @@ namespace ApiInterface.Parser
 
         string databaseName = matchDatabaseName.Groups[1].Value;
       }
-      else if (sentence.StartsWith("SET DATABASE")) 
-      { 
+      else if (sentence.StartsWith("SET DATABASE"))
+      {
         pattern = @"SET\s+DATABASE\s(\S+)";
         Match matchDatabaseName = Regex.Match(sentence, pattern, RegexOptions.IgnoreCase);
 
@@ -120,7 +120,25 @@ namespace ApiInterface.Parser
 
         string databaseName = matchDatabaseName.Groups[1].Value;
       }
-      else if (sentence.StartsWith("CREATE TABLE")) { 
+      else if (sentence.StartsWith("CREATE TABLE"))
+      {
+        string patternTableName = @"CREATE\s+TABLE\s+(\w+)";
+        string patternTableContent = @"CREATE\s+TABLE\s+\w+\s*\(([^)]+)\)";
+        Match matchTableName = Regex.Match(sentence, patternTableName);
+        Match matchTableContent = Regex.Match(sentence, patternTableContent);
+
+        if (!(matchTableName.Success && matchTableContent.Success))
+        {
+          return OperationStatus.Error;
+        }
+
+        string name = matchTableName.Groups[1].Value;
+        string content = matchTableContent.Groups[1].Value;
+        string[] columns = content.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (string column in columns){
+          Console.WriteLine($"|{column.Trim()}|");
+        }
 
       }
       else if (sentence.StartsWith("CREATE INDEX")) { }

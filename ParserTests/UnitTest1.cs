@@ -122,4 +122,30 @@ public class SQLQueryProcessorTests
       Assert.Equal(parsed, OperationStatus.Error);
     }
   }
+
+  [Fact]
+  public void Parse_CreateTableSuccess()
+  {
+    string[] sentences = {
+      "CREATE TABLE USERS( ID INTEGER, NAME VARCHAR(50) )", 
+      "CREATE TABLE TRABAJADORES (ID INTEGER, NAME VARCHAR(50)), SALARIO INTEGER" };
+    OperationStatus parsed;
+    foreach (string sentence in sentences){
+      parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Success);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateTableError()
+  {
+    string[] sentences = { "CREATE TABLE (ID INTEGER, NAME VARCHAR(50))", "CREATE TABLE ESTUDIANTES(ID INTEGER NAME VARCHAR" };
+    OperationStatus parsed;
+    foreach (string sentence in sentences)
+    {
+      parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Error);
+    }
+  }
+
 }
