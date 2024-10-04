@@ -51,10 +51,15 @@ namespace ApiInterface.Parser
       {
         if (!string.IsNullOrWhiteSpace(sentence))
         {
-          NewSentences.Add(sentence.Trim());
+          NewSentences.Add(RemoveExtraWhitespaces(sentence.Trim()));
         }
       }
       return NewSentences;
+    }
+
+    private static string RemoveExtraWhitespaces(string sentence)
+    {
+        return Regex.Replace(sentence, @"\s+", " ");
     }
 
     /*
@@ -103,13 +108,27 @@ namespace ApiInterface.Parser
 
         string databaseName = matchDatabaseName.Groups[1].Value;
       }
-      else if (sentence.StartsWith("SET DATABASE")) { }
-      else if (sentence.StartsWith("CREATE TABLE")) { }
+      else if (sentence.StartsWith("SET DATABASE")) 
+      { 
+        pattern = @"SET\s+DATABASE\s(\S+)";
+        Match matchDatabaseName = Regex.Match(sentence, pattern, RegexOptions.IgnoreCase);
+
+        if (!matchDatabaseName.Success)
+        {
+          return OperationStatus.Error;
+        }
+
+        string databaseName = matchDatabaseName.Groups[1].Value;
+      }
+      else if (sentence.StartsWith("CREATE TABLE")) { 
+
+      }
       else if (sentence.StartsWith("CREATE INDEX")) { }
       else if (sentence.StartsWith("INSERT")) { }
       else if (sentence.StartsWith("SELECT")) { }
       else if (sentence.StartsWith("DELETE")) { }
       else if (sentence.StartsWith("UPDATE SET")) { }
+      else if (sentence.StartsWith("DROP TABLE")) { }
       return OperationStatus.Success;
     }
 
