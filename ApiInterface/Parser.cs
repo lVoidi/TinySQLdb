@@ -135,18 +135,21 @@ namespace ApiInterface.Parser
         string name = matchTableName.Groups[1].Value;
         string content = matchTableContent.Groups[1].Value;
         string[] columns = content.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (string column in columns){
-          Console.WriteLine($"|{column.Trim()}|");
-        }
-
       }
       else if (sentence.StartsWith("CREATE INDEX")) { }
       else if (sentence.StartsWith("INSERT")) { }
       else if (sentence.StartsWith("SELECT")) { }
       else if (sentence.StartsWith("DELETE")) { }
       else if (sentence.StartsWith("UPDATE SET")) { }
-      else if (sentence.StartsWith("DROP TABLE")) { }
+      else if (sentence.StartsWith("DROP TABLE"))
+      {
+        pattern = @"DROP\s+TABLE\s(\S+)";
+        Match matchTableName = Regex.Match(sentence, pattern);
+        if (!matchTableName.Success)
+        {
+          return OperationStatus.Error;
+        }
+      }
       return OperationStatus.Success;
     }
 
