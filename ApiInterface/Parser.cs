@@ -69,7 +69,8 @@ namespace ApiInterface.Parser
         if (character == '(')
         {
           openParenthesis.Push(character);
-        } else if (character == ')')
+        }
+        else if (character == ')')
         {
           if (openParenthesis.Count == 0)
           {
@@ -83,22 +84,33 @@ namespace ApiInterface.Parser
     }
 
     /*
-     * TODO: (3)
      * Esta funcion se va a encargar de ver que comando sql se va a ejecutar
      * Se encarga de guardar en Data la base de datos en el instante
      */
-    private static OperationStatus Parse(string sentence)
+    public static OperationStatus Parse(string sentence)
     {
       sentence = sentence.ToUpper();
-      if (sentence.StartsWith("CREATE DATABASE")){}
-      else if (sentence.StartsWith("SET DATABASE")){}
-      else if (sentence.StartsWith("CREATE TABLE")){}
-      else if (sentence.StartsWith("CREATE INDEX")){}
-      else if (sentence.StartsWith("INSERT")){}
-      else if (sentence.StartsWith("SELECT")){}
-      else if (sentence.StartsWith("DELETE")){}
-      else if (sentence.StartsWith("UPDATE SET")){}
-      return OperationStatus.Success; 
+      string pattern;
+      if (sentence.StartsWith("CREATE DATABASE"))
+      {
+        pattern = @"CREATE\s+DATABASE\s(\S+)";
+        Match matchDatabaseName = Regex.Match(sentence, pattern, RegexOptions.IgnoreCase);
+
+        if (!matchDatabaseName.Success)
+        {
+          return OperationStatus.Error;
+        }
+
+        string databaseName = matchDatabaseName.Groups[1].Value;
+      }
+      else if (sentence.StartsWith("SET DATABASE")) { }
+      else if (sentence.StartsWith("CREATE TABLE")) { }
+      else if (sentence.StartsWith("CREATE INDEX")) { }
+      else if (sentence.StartsWith("INSERT")) { }
+      else if (sentence.StartsWith("SELECT")) { }
+      else if (sentence.StartsWith("DELETE")) { }
+      else if (sentence.StartsWith("UPDATE SET")) { }
+      return OperationStatus.Success;
     }
 
   }

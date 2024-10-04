@@ -1,7 +1,7 @@
 namespace ParserTests;
 
 using ApiInterface.Parser;
-using System;
+using ApiInterface.Models;
 using Xunit;
 
 public class SQLQueryProcessorTests
@@ -79,7 +79,7 @@ public class SQLQueryProcessorTests
     string[] correctSentences = { "(())", "()" };
     foreach (string sentence in correctSentences)
     {
-     Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), true);
+      Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), true);
     }
   }
 
@@ -89,8 +89,29 @@ public class SQLQueryProcessorTests
     string[] wrongSentences = { "(()", "(", "())" };
     foreach (string sentence in wrongSentences)
     {
-     Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), false);
+      Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), false);
     }
   }
 
+  [Fact]
+  public void Parse_CreateDatabaseSuccess()
+  {
+    string[] sentences = { "CREATE DATABASE ESTUDIANTES", "CREATE DATABASE PROFESORES", "CREATE DATABASE 1CONTRASEÑAS " };
+    foreach (string sentence in sentences)
+    {
+      OperationStatus parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Success);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateDatabaseError()
+  {
+    string[] sentences = { "CREATE DATABASE ", "CREATE DATABASE       ", "CREATE DATABASE" };
+    foreach (string sentence in sentences)
+    {
+      OperationStatus parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Error);
+    }
+  }
 }
