@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ApiInterface")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cd58c92d6ab938c75f84dcbfa8c8f1ee01bc1d2e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7c882032ff442cfca47c114d3949590606343b2b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ApiInterface")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ApiInterface")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
