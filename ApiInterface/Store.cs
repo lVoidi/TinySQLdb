@@ -196,18 +196,148 @@ namespace ApiInterface.Store
         return true;
     }
 
+    public List<Dictionary<string, object>> Select(string tableName, List<string> columns, string? whereClause = null, string? orderBy = null, bool isAscending = true)
+    {
+        // Verificar si la tabla existe
+        Table? table = Tables.Find(t => t.Name == tableName);
+        if (table == null)
+        {
+            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+        }
+
+        // Obtener todas las filas de la tabla (esto es una simplificación, en realidad deberías tener una estructura de datos para las filas)
+        List<Dictionary<string, object>> rows = GetTableRows(table);
+
+        // Aplicar la cláusula WHERE si existe
+        if (!string.IsNullOrEmpty(whereClause))
+        {
+            rows = ApplyWhereClause(rows, whereClause, table);
+        }
+
+        // Aplicar ORDER BY si se especifica
+        if (!string.IsNullOrEmpty(orderBy))
+        {
+            ApplyOrderBy(rows, orderBy, isAscending);
+        }
+
+        // Seleccionar las columnas especificadas
+        if (columns.Count > 0 && columns[0] != "*")
+        {
+            rows = SelectColumns(rows, columns);
+        }
+
+        return rows;
+    }
+
+    private List<Dictionary<string, object>> GetTableRows(Table table)
+    {
+        // TODO: Implementar la lógica para obtener las filas de la tabla
+        // Esta es una implementación de ejemplo
+        return new List<Dictionary<string, object>>();
+    }
+
+    private List<Dictionary<string, object>> ApplyWhereClause(List<Dictionary<string, object>> rows, string whereClause, Table table)
+    {
+        // Parsear la cláusula WHERE
+        string[] parts = whereClause.Split(' ');
+        if (parts.Length != 3)
+        {
+            throw new ArgumentException("Cláusula WHERE inválida.");
+        }
+
+        string columnName = parts[0];
+        string compareOperator = parts[1];
+        string value = parts[2];
+
+        // Verificar si existe un índice para la columna
+        if (table.HasIndex && table.IndexColumn == columnName)
+        {
+            // Usar el índice para la búsqueda
+            return UseIndexForSearch(table, columnName, compareOperator, value);
+        }
+        else
+        {
+            // Realizar una búsqueda secuencial
+            return rows.Where(row => CompareValue(row[columnName], compareOperator, value)).ToList();
+        }
+    }
+
+    private List<Dictionary<string, object>> UseIndexForSearch(Table table, string columnName, string compareOperator, string value)
+    {
+        // TODO: Implementar la búsqueda utilizando el índice
+        // Esta es una implementación de ejemplo
+        return new List<Dictionary<string, object>>();
+    }
+
+    private bool CompareValue(object rowValue, string compareOperator, string value)
+    {
+        // TODO: Implementar la comparación según el operador
+        // Esta es una implementación de ejemplo
+        return true;
+    }
+
+    private void ApplyOrderBy(List<Dictionary<string, object>> rows, string orderByColumn, bool isAscending)
+    {
+        // Implementar Quicksort para ordenar las filas
+        QuickSort(rows, 0, rows.Count - 1, orderByColumn, isAscending);
+    }
+
+    private void QuickSort(List<Dictionary<string, object>> rows, int low, int high, string orderByColumn, bool isAscending)
+    {
+        if (low < high)
+        {
+            int partitionIndex = Partition(rows, low, high, orderByColumn, isAscending);
+
+            QuickSort(rows, low, partitionIndex - 1, orderByColumn, isAscending);
+            QuickSort(rows, partitionIndex + 1, high, orderByColumn, isAscending);
+        }
+    }
+
+    private int Partition(List<Dictionary<string, object>> rows, int low, int high, string orderByColumn, bool isAscending)
+    {
+        var pivot = rows[high][orderByColumn];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++)
+        {
+            if (CompareForSort(rows[j][orderByColumn], pivot, isAscending) <= 0)
+            {
+                i++;
+                var temp = rows[i];
+                rows[i] = rows[j];
+                rows[j] = temp;
+            }
+        }
+
+        var temp1 = rows[i + 1];
+        rows[i + 1] = rows[high];
+        rows[high] = temp1;
+
+        return i + 1;
+    }
+
+    private int CompareForSort(object a, object b, bool isAscending)
+    {
+        // TODO: Implementar la comparación según el tipo de datos
+        // Esta es una implementación de ejemplo
+        return 0;
+    }
+
+    private List<Dictionary<string, object>> SelectColumns(List<Dictionary<string, object>> rows, List<string> columns)
+    {
+        return rows.Select(row => new Dictionary<string, object>(
+            row.Where(kvp => columns.Contains(kvp.Key))
+        )).ToList();
+    }
+
   }
 
-  public class Table
+  public class Table(string name, List<Field> fields)
   {
-    public string Name { get; set; }
-    public List<Field> Fields { get; set; }
-
-    public Table(string name, List<Field> fields)
-    {
-        Name = name;
-        Fields = fields;
-    }
+    public string Name { get; } = name;
+    public List<Field> Fields { get; } = fields;
+    public bool HasIndex { get; set; }
+    public string IndexColumn { get; set; }
   }
 
   public class Field
