@@ -19,10 +19,8 @@ namespace ApiInterface.Store
     private string? FileData;
     private string? Name;
     private DataPath? Path;
-    private Table? Table;
+    private List<Table> Tables = new List<Table>();
     
-    // TODO: (2)
-    // fields es un string tipo: "ID Integer,Name Varchar(20)" 
     public void CreateTableAs(string name, string fields)
     {
       Name = name;
@@ -61,14 +59,15 @@ namespace ApiInterface.Store
         tableFields.Add(new Field(fieldName, fieldType, fieldSize));
       }
       
-      // Crear la sentencia SQL para CREATE TABLE
+      // Crear una nueva tabla y añadirla a la lista de tablas
+      Table newTable = new Table(name, tableFields);
+      Tables.Add(newTable);
+
+      // Generar la sentencia SQL CREATE TABLE (opcional, para referencia)
       string createTableSQL = $"CREATE TABLE {name} (\n";
       createTableSQL += string.Join(",\n", tableFields.Select(f => 
           $"  {f.Name} {f.Type}{(f.Type == "VARCHAR" ? $"({f.Size})" : "")}"));
       createTableSQL += "\n);";
-
-      // Aquí deberías ejecutar la sentencia SQL en tu base de datos
-      // Por ejemplo: ExecuteSQL(createTableSQL);
 
       // Guardar la definición de la tabla si es necesario
       if (Path != null)
@@ -81,12 +80,12 @@ namespace ApiInterface.Store
     // Serializa los datos de Table
     public void SerializeData()
     {
-        if (Table == null || string.IsNullOrEmpty(Name))
+        if (Tables.Count == 0 || string.IsNullOrEmpty(Name))
         {
-            throw new InvalidOperationException("La tabla no está inicializada o no tiene nombre.");
+            throw new InvalidOperationException("No hay tablas para serializar o no se ha definido un nombre.");
         }
 
-        string jsonString = JsonSerializer.Serialize(Table);
+        string jsonString = JsonSerializer.Serialize(Tables);
         string fileName = $"{Name}.json";
         File.WriteAllText(fileName, jsonString);
     }
@@ -97,14 +96,14 @@ namespace ApiInterface.Store
     {
         if (string.IsNullOrEmpty(Name))
         {
-            throw new InvalidOperationException("El nombre de la tabla no está definido.");
+            throw new InvalidOperationException("El nombre de la base de datos no está definido.");
         }
 
         string fileName = $"{Name}.json";
         if (File.Exists(fileName))
         {
             string jsonString = File.ReadAllText(fileName);
-            Table = JsonSerializer.Deserialize<Table>(jsonString);
+            Tables = JsonSerializer.Deserialize<List<Table>>(jsonString) ?? new List<Table>();
         }
         else
         {
@@ -197,6 +196,18 @@ namespace ApiInterface.Store
         return true;
     }
 
+  }
+
+  public class Table
+  {
+    public string Name { get; set; }
+    public List<Field> Fields { get; set; }
+
+    public Table(string name, List<Field> fields)
+    {
+        Name = name;
+        Fields = fields;
+    }
   }
 
   public class Field
