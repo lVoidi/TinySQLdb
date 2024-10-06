@@ -1,5 +1,7 @@
 using ApiInterface.Structures;
 using System.Data;
+using System.Text.Json;
+using System.IO;
 namespace ApiInterface.Store
 {
   /*
@@ -304,12 +306,14 @@ namespace ApiInterface.Store
 
   }
 
+
+
+
   /*
    * Esta clase maneja los paths del proyecto
    */
   internal class DataPath
   {
-    // TODO: (1)
     private string AppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private string Database;
     private string? Table;
@@ -317,10 +321,44 @@ namespace ApiInterface.Store
     public DataPath(string Name)
     {
       Database = Name;
+      // Crear el directorio de la base de datos si no existe
+      string databasePath = Path.Combine(AppDataPath, "DatabaseApp", Database);
+      Directory.CreateDirectory(databasePath);
     }
 
-    public void SaveTableAs(string name, string data) { }
-    public void LoadTable(string name) { }
+    public void SaveTableAs(string name, object data)
+    {
+      Table = name;
+      string filePath = GetTableFilePath();
+      string jsonData = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+      File.WriteAllText(filePath, jsonData);
+      Console.WriteLine($"Tabla '{name}' guardada exitosamente en {filePath}");
+    }
+
+    public T? LoadTable<T>(string name) where T : class
+    {
+      Table = name;
+      string filePath = GetTableFilePath();
+      if (!File.Exists(filePath))
+      {
+        Console.WriteLine($"La tabla '{name}' no existe en la base de datos '{Database}'.");
+        return null;
+      }
+
+      string jsonData = File.ReadAllText(filePath);
+      T? loadedData = JsonSerializer.Deserialize<T>(jsonData);
+      Console.WriteLine($"Tabla '{name}' cargada exitosamente desde {filePath}");
+      return loadedData;
+    }
+
+    private string GetTableFilePath()
+    {
+      if (string.IsNullOrEmpty(Table))
+      {
+        throw new InvalidOperationException("Nombre de tabla no especificado.");
+      }
+      return Path.Combine(AppDataPath, "DatabaseApp", Database, $"{Table}.json");
+    }
   }
 
 }
