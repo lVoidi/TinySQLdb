@@ -1,1 +1,4 @@
 ./ApiInterface/obj/
+./ParserTests/obj/
+./ApiInterface/bin/
+./ParserTests/bin/
