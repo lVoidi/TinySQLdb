@@ -304,6 +304,66 @@ namespace ApiInterface.Store
       )).ToList();
     }
 
+    public void Update(string tableName, Dictionary<string, object> setValues, string? whereClause = null)
+    {
+        // Verificar si la tabla existe
+        Table? table = Tables.Find(t => t.Name == tableName);
+        if (table == null)
+        {
+            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+        }
+
+        // Obtener todas las filas de la tabla
+        List<Dictionary<string, object>> rows = GetTableRows(table);
+
+        // Aplicar la cláusula WHERE si existe
+        if (!string.IsNullOrEmpty(whereClause))
+        {
+            rows = ApplyWhereClause(rows, whereClause, table);
+        }
+
+        // Actualizar las filas
+        foreach (var row in rows)
+        {
+            foreach (var kvp in setValues)
+            {
+                if (row.ContainsKey(kvp.Key))
+                {
+                    row[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+
+        // Actualizar índices si es necesario
+        foreach (var column in setValues.Keys)
+        {
+            if (table.HasIndex && table.IndexColumn == column)
+            {
+                UpdateIndex(table, column);
+            }
+        }
+
+        Console.WriteLine($"Se actualizaron {rows.Count} filas en la tabla '{tableName}'.");
+
+        // Guardar los cambios en el archivo
+        SaveTable(tableName);
+    }
+
+    private void UpdateIndex(Table table, string column)
+    {
+        // TODO: Implementar la actualización del índice
+        Console.WriteLine($"Actualizando el índice para la columna '{column}' en la tabla '{table.Name}'.");
+    }
+
+    private void SaveTable(string tableName)
+    {
+        Table? table = Tables.Find(t => t.Name == tableName);
+        if (table != null && Path != null)
+        {
+            Path.SaveTableAs(tableName, table);
+        }
+    }
+
   }
 
 
