@@ -403,6 +403,77 @@ namespace ApiInterface.Store
         SaveTable(tableName);
     }   
     
+    public void Insert(string tableName, List<object> values)
+    {
+        // Verificar si la tabla existe
+        Table? table = Tables.Find(t => t.Name == tableName);
+        if (table == null)
+        {
+            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+        }
+
+        // Verificar si el número de valores coincide con el número de campos
+        if (values.Count != table.TableFields.Count)
+        {
+            throw new ArgumentException($"El número de valores ({values.Count}) no coincide con el número de campos en la tabla ({table.TableFields.Count}).");
+        }
+
+        // Crear un nuevo diccionario para la fila
+        Dictionary<string, object> newRow = new Dictionary<string, object>();
+
+        // Validar y asignar los valores a cada campo
+        for (int i = 0; i < table.TableFields.Count; i++)
+        {
+            Field field = table.TableFields[i];
+            object value = values[i];
+
+            // Validar el tipo de dato
+            switch (field.Type.ToUpper())
+            {
+                case "INTEGER":
+                    if (!int.TryParse(value.ToString(), out int intValue))
+                        throw new ArgumentException($"El valor '{value}' no es válido para el campo INTEGER '{field.Name}'.");
+                    newRow[field.Name] = intValue;
+                    break;
+                case "DOUBLE":
+                    if (!double.TryParse(value.ToString(), out double doubleValue))
+                        throw new ArgumentException($"El valor '{value}' no es válido para el campo DOUBLE '{field.Name}'.");
+                    newRow[field.Name] = doubleValue;
+                    break;
+                case "DATETIME":
+                    if (!DateTime.TryParse(value.ToString(), out DateTime dateTimeValue))
+                        throw new ArgumentException($"El valor '{value}' no es válido para el campo DATETIME '{field.Name}'.");
+                    newRow[field.Name] = dateTimeValue;
+                    break;
+                case "VARCHAR":
+                    string stringValue = value.ToString() ?? "";
+                    if (field.Size.HasValue && stringValue.Length > field.Size.Value)
+                        throw new ArgumentException($"El valor '{value}' excede la longitud máxima ({field.Size.Value}) para el campo VARCHAR '{field.Name}'.");
+                    newRow[field.Name] = stringValue;
+                    break;
+                default:
+                    throw new ArgumentException($"Tipo de dato no soportado: {field.Type}");
+            }
+        }
+
+        // Agregar la nueva fila a la tabla
+        List<Dictionary<string, object>> rows = GetTableRows(table);
+        rows.Add(newRow);
+
+        // Actualizar la tabla con la nueva fila
+        table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
+
+        // Actualizar índices si es necesario
+        if (table.HasIndex)
+        {
+            UpdateIndex(table, table.IndexColumn);
+        }
+
+        Console.WriteLine($"Se insertó una nueva fila en la tabla '{tableName}'.");
+
+        // Guardar los cambios en el archivo
+        SaveTable(tableName);
+    }
   }
 
 
