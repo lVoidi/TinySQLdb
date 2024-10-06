@@ -1,7 +1,7 @@
 namespace ParserTests;
 
 using ApiInterface.Parser;
-using System;
+using ApiInterface.Models;
 using Xunit;
 
 public class SQLQueryProcessorTests
@@ -37,16 +37,24 @@ public class SQLQueryProcessorTests
   [Fact]
   public void AddSentences_ExtraWhitespacesAndNewlines_ShouldTrimSentences()
   {
-    string script = "  SELECT * FROM Users;  \n  INSERT INTO Users (Name) VALUES ('John');\n  DELETE FROM Users WHERE Id = 1; ";
+    string script = @"  SELECT * FROM Users;
+                            INSERT INTO Users (Name) VALUES ('John');
+                            DELETE FROM Users WHERE Id = 1;
+                            CREATE TABLE ESTUDIANTES(
+                              ID INTEGER,
+                              NAME VARCHAR(255)
+                            );
+    ";
 
     // Act
     List<string> Sentences = SQLQueryProcessor.AddSentences(script);
 
     // Assert
-    Assert.Equal(3, Sentences.Count);
+    Assert.Equal(4, Sentences.Count);
     Assert.Equal("SELECT * FROM Users", Sentences[0]);
     Assert.Equal("INSERT INTO Users (Name) VALUES ('John')", Sentences[1]);
     Assert.Equal("DELETE FROM Users WHERE Id = 1", Sentences[2]);
+    Assert.Equal("CREATE TABLE ESTUDIANTES( ID INTEGER, NAME VARCHAR(255) )", Sentences[3]);
   }
 
   [Fact]
@@ -79,7 +87,7 @@ public class SQLQueryProcessorTests
     string[] correctSentences = { "(())", "()" };
     foreach (string sentence in correctSentences)
     {
-     Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), true);
+      Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), true);
     }
   }
 
@@ -89,7 +97,54 @@ public class SQLQueryProcessorTests
     string[] wrongSentences = { "(()", "(", "())" };
     foreach (string sentence in wrongSentences)
     {
-     Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), false);
+      Assert.Equal(SQLQueryProcessor.HasCorrectParenthesis(sentence), false);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateDatabaseSuccess()
+  {
+    string[] sentences = { "CREATE DATABASE ESTUDIANTES", "CREATE DATABASE PROFESORES", "CREATE DATABASE 1CONTRASEÑAS " };
+    foreach (string sentence in sentences)
+    {
+      OperationStatus parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Success);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateDatabaseError()
+  {
+    string[] sentences = { "CREATE DATABASE ", "CREATE DATABASE       ", "CREATE DATABASE" };
+    foreach (string sentence in sentences)
+    {
+      OperationStatus parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Error);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateTableSuccess()
+  {
+    string[] sentences = {
+      "CREATE TABLE USERS( ID INTEGER, NAME VARCHAR(50) )", 
+      "CREATE TABLE TRABAJADORES (ID INTEGER, NAME VARCHAR(50)), SALARIO INTEGER" };
+    OperationStatus parsed;
+    foreach (string sentence in sentences){
+      parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Success);
+    }
+  }
+
+  [Fact]
+  public void Parse_CreateTableError()
+  {
+    string[] sentences = { "CREATE TABLE (ID INTEGER, NAME VARCHAR(50))", "CREATE TABLE ESTUDIANTES(ID INTEGER NAME VARCHAR" };
+    OperationStatus parsed;
+    foreach (string sentence in sentences)
+    {
+      parsed = SQLQueryProcessor.Parse(sentence);
+      Assert.Equal(parsed, OperationStatus.Error);
     }
   }
 
