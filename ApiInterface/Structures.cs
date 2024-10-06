@@ -7,15 +7,32 @@
 using ApiInterface.Models;
 namespace ApiInterface.Structures
 {
+  internal class Field
+  {
+    public string Name;
+    public string Type;
+    public int? Size;
+
+    public Field(string name, string type, int? size)
+    {
+      Name = name;
+      Type = type;
+      Size = size;
+    }
+  }
   internal class Table
   {
-    public int Columns;
-    public TableIndex Index = TableIndex.None;
     private IndexBinaryTree? Tree;
+    public string Name;
+    public bool HasIndex = false;
+    public string IndexColumn = "";
+    public TableIndex Index = TableIndex.None;
+    public List<Field> TableFields;
 
-    public Table(int columns)
+    public Table(string name, List<Field> tableFields)
     {
-      Columns = columns;
+      Name = name;
+      TableFields = tableFields;
     }
 
     public void Insert(string row)
@@ -25,10 +42,16 @@ namespace ApiInterface.Structures
     public void Delete(string row)
     {
     }
-    
+
+    public override string ToString()
+    {
+      return "";
+    }
+
     // TODO: (1)
     public void CreateIndex(TableIndex index)
     {
+      HasIndex = true;
       if (index == TableIndex.BSTree)
       {
         Tree = new IndexBinaryTree();
