@@ -339,7 +339,7 @@ namespace ApiInterface.Store
         {
             if (table.HasIndex && table.IndexColumn == column)
             {
-                UpdateIndex(table, column);
+                new Data().UpdateIndex(table, table.IndexColumn);
             }
         }
 
@@ -364,6 +364,45 @@ namespace ApiInterface.Store
         }
     }
 
+    public void Delete(string tableName, string? whereClause = null)
+    {
+        // Verificar si la tabla existe
+        Table? table = Tables.Find(t => t.Name == tableName);
+        if (table == null)
+        {
+            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+        }
+
+        // Obtener todas las filas de la tabla
+        List<Dictionary<string, object>> rows = GetTableRows(table);
+
+        // Si hay una cláusula WHERE, aplicarla para filtrar las filas a eliminar
+        if (!string.IsNullOrEmpty(whereClause))
+        {
+            var rowsToDelete = ApplyWhereClause(rows, whereClause, table);
+            rows = rows.Except(rowsToDelete).ToList();
+        }
+        else
+        {
+            // Si no hay cláusula WHERE, eliminar todas las filas
+            rows.Clear();
+        }
+
+        // Actualizar la tabla con las filas restantes
+        table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
+
+        // Actualizar índices si es necesario
+        if (table.HasIndex)
+        {
+           UpdateIndex(table, table.IndexColumn);
+        }
+
+        Console.WriteLine($"Se eliminaron {rows.Count} filas de la tabla '{tableName}'.");
+
+        // Guardar los cambios en el archivo
+        SaveTable(tableName);
+    }   
+    
   }
 
 
