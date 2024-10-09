@@ -14,6 +14,7 @@ namespace ApiInterface.Parser
 
     public static OperationStatus Execute(string script)
     {
+      data = new();
       Sentences = AddSentences(script);
       OperationStatus result = OperationStatus.Success;
       if (Sentences.Count == 0)
@@ -107,6 +108,7 @@ namespace ApiInterface.Parser
         }
 
         string databaseName = matchDatabaseName.Groups[1].Value;
+        data.CreateDatabase(databaseName);
       }
       else if (sentence.StartsWith("SET DATABASE"))
       {
@@ -119,6 +121,7 @@ namespace ApiInterface.Parser
         }
 
         string databaseName = matchDatabaseName.Groups[1].Value;
+        data.SetDatabaseAs(databaseName);
       }
       else if (sentence.StartsWith("CREATE TABLE"))
       {

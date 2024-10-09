@@ -1,0 +1,15 @@
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.GeneratedMSBuildEditorConfig.editorconfig
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.AssemblyInfoInputs.cache
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.AssemblyInfo.cs
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.csproj.CoreCompileInputs.cache
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.sourcelink.json
+/home/roarba/Documents/TinySQLdb/ApiInterface/bin/Debug/net8.0/ApiInterface
+/home/roarba/Documents/TinySQLdb/ApiInterface/bin/Debug/net8.0/ApiInterface.deps.json
+/home/roarba/Documents/TinySQLdb/ApiInterface/bin/Debug/net8.0/ApiInterface.runtimeconfig.json
+/home/roarba/Documents/TinySQLdb/ApiInterface/bin/Debug/net8.0/ApiInterface.dll
+/home/roarba/Documents/TinySQLdb/ApiInterface/bin/Debug/net8.0/ApiInterface.pdb
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.dll
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/refint/ApiInterface.dll
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.pdb
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ApiInterface.genruntimeconfig.cache
+/home/roarba/Documents/TinySQLdb/ApiInterface/obj/Debug/net8.0/ref/ApiInterface.dll
