@@ -216,7 +216,7 @@ namespace ApiInterface.Store
       string value = parts[2];
 
       // Verificar si existe un índice para la columna
-      if (table.HasIndex && table.IndexColumn == columnName)
+      if (table.HasIndex && table.IndexColumns.Contains(columnName))
       {
         // Usar el índice para la búsqueda
         return UseIndexForSearch(table, columnName, compareOperator, value);
@@ -329,9 +329,9 @@ namespace ApiInterface.Store
       // Actualizar índices si es necesario
       foreach (var column in setValues.Keys)
       {
-        if (table.HasIndex && table.IndexColumn == column)
+       // if (table.HasIndex && table.IndexColumn == column)
         {
-          new Data().UpdateIndex(table, table.IndexColumn);
+          new Data().UpdateIndex(table, column);
         }
       }
 
@@ -386,7 +386,7 @@ namespace ApiInterface.Store
       // Actualizar índices si es necesario
       if (table.HasIndex)
       {
-        UpdateIndex(table, table.IndexColumn);
+        //UpdateIndex(table, field.Name);
       }
 
       Console.WriteLine($"Se eliminaron {rows.Count} filas de la tabla '{tableName}'.");
@@ -456,9 +456,9 @@ namespace ApiInterface.Store
       table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
 
       // Actualizar índices si es necesario
-      if (table.HasIndex)
+      foreach (var field in table.TableFields)
       {
-        UpdateIndex(table, table.IndexColumn);
+        UpdateIndex(table, field.Name);
       }
 
       Console.WriteLine($"Se insertó una nueva fila en la tabla '{tableName}'.");

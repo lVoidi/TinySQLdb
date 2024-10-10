@@ -1,25 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "/home/roarba/Documents/TinySQLdb/ApiInterface/ApiInterface.csproj": {}
+    "C:\\Users\\david\\Downloads\\TinySQLdb\\ApiInterface\\ApiInterface.csproj": {}
   },
   "projects": {
-    "/home/roarba/Documents/TinySQLdb/ApiInterface/ApiInterface.csproj": {
+    "C:\\Users\\david\\Downloads\\TinySQLdb\\ApiInterface\\ApiInterface.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/roarba/Documents/TinySQLdb/ApiInterface/ApiInterface.csproj",
+        "projectUniqueName": "C:\\Users\\david\\Downloads\\TinySQLdb\\ApiInterface\\ApiInterface.csproj",
         "projectName": "ApiInterface",
-        "projectPath": "/home/roarba/Documents/TinySQLdb/ApiInterface/ApiInterface.csproj",
-        "packagesPath": "/home/roarba/.nuget/packages/",
-        "outputPath": "/home/roarba/Documents/TinySQLdb/ApiInterface/obj/",
+        "projectPath": "C:\\Users\\david\\Downloads\\TinySQLdb\\ApiInterface\\ApiInterface.csproj",
+        "packagesPath": "C:\\Users\\david\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\david\\Downloads\\TinySQLdb\\ApiInterface\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/roarba/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\david\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -32,6 +39,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -53,7 +65,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/8.0.108/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
