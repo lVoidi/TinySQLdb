@@ -60,7 +60,7 @@ namespace ApiInterface.Structures
 
     public void Insert(int key, List<Field> field)
     {
-      if (BTree == null || BSTree == null)
+      if (BTree == null && BSTree == null)
         return;
       if (Index == TableIndex.BTree)
       {

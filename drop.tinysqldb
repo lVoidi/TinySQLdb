@@ -1,0 +1,2 @@
+SET DATABASE Universidad;
+DROP TABLE Estudiantes;

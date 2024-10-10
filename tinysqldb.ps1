@@ -35,7 +35,12 @@ function Receive-Message {
     $stream = New-Object System.Net.Sockets.NetworkStream($client)
     $reader = New-Object System.IO.StreamReader($stream)
     try {
-        return $null -ne $reader.ReadLine ? $reader.ReadLine() : ""
+        $message = $reader.ReadLine()
+        if ($null -ne $message) {
+            return $message
+        } else {
+            return ""
+        }
     }
     finally {
         $reader.Close()
@@ -48,7 +53,7 @@ function Send-SQLCommand {
     )
     
     # Read the file content
-    $command = Get-Content -Path $filePath -Raw
+    $command = Get-Content -Path $filePath -Raw | Out-String
     
     $client = New-Object System.Net.Sockets.Socket($ipEndPoint.AddressFamily, [System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
     $client.Connect($ipEndPoint)
@@ -64,8 +69,19 @@ function Send-SQLCommand {
 
     Write-Host -ForegroundColor Green "Response received: $response"
     
-    $responseObject = ConvertFrom-Json -InputObject $response
-    Write-Output $responseObject
+    if (-not [string]::IsNullOrWhiteSpace($response)) {
+        $responseObject = ConvertFrom-Json -InputObject $response
+        if ($responseObject.PSObject.Properties.Name -contains 'Status') {
+            if ($responseObject.Status -eq '1') {
+                Write-Host -ForegroundColor Red $responseObject.Status
+            } else {
+                Write-Host -ForegroundColor Green $responseObject.Status
+            }
+        } else {
+            Write-Warning "El campo 'Status' no está presente en la respuesta JSON."
+        }
+    }
+    
     $client.Shutdown([System.Net.Sockets.SocketShutdown]::Both)
     $client.Close()
 }

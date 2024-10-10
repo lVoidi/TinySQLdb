@@ -128,6 +128,29 @@ internal class IndexBSTreeNode
       root = DeleteRec(root, key);
     }
 
+    public void UpdateInnerData(int key, List<Field> value)
+    {
+      UpdateInnerData_aux(root, key, value);
+    }
+
+    private void UpdateInnerData_aux(IndexBSTreeNode root, int key, List<Field> value)
+    {
+      if (root == null)
+        return;
+      if (root.Key == key)
+      {
+        root.InnerData = value;
+      }
+      else if (key < root.Key)
+      {
+        UpdateInnerData_aux(root.Left, key, value);
+      }
+      else
+      {
+        UpdateInnerData_aux(root.Right, key, value);
+      }
+    }
+
     private IndexBSTreeNode DeleteRec(IndexBSTreeNode root, int key)
     {
       if (root == null)

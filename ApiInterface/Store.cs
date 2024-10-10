@@ -5,6 +5,7 @@ using System.Data;
 using System.Text.Json;
 using System.IO;
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 namespace ApiInterface.Store
 {
   /*
@@ -14,9 +15,9 @@ namespace ApiInterface.Store
   {
     private string? FileData;
     private string? Name;
-    List<Dictionary<string, object>> Selected = new();
     private DataPath? Path = null;
-    public List<Table> Tables = new List<Table>();
+    public Table? Table = null;
+    public string Database;
 
     public void CreateTableAs(string name, string[] fields)
     {
@@ -34,31 +35,21 @@ namespace ApiInterface.Store
 
         string fieldName = parts[0];
         string fieldType = parts[1].ToUpper();
-        int? fieldSize = null;
+        int? fieldSize = 32;
 
-        switch (fieldType)
+        if (fieldType.Contains("VARCHAR"))
         {
-          case "INTEGER":
-          case "DOUBLE":
-          case "DATETIME":
-            break;
-          case "VARCHAR":
-            if (parts.Length < 3 || !int.TryParse(parts[2].Trim('(', ')'), out int size))
-            {
-              throw new ArgumentException($"El tipo VARCHAR debe especificar un tamaño válido: {fieldDef}");
-            }
-            fieldSize = size;
-            break;
-          default:
-            throw new ArgumentException($"Tipo de dato no soportado: {fieldType}");
-        }
-        headers.AddLast(new Field(fieldName, fieldType, fieldSize, ""));
+          string[] sizeParts = fieldType.Split('(');
+
+          if (sizeParts.Length > 1){
+            fieldSize = int.Parse(sizeParts[1].Trim(')', ' '));
+          }
+        } 
+        headers.AddLast(new Field(fieldName, fieldType, fieldSize, "HEAD"));
+        Console.WriteLine($"Field: {fieldName} - Type: {fieldType} - Size: {fieldSize} COUNT {fields.Length}");
       }
-
-      // Crear una nueva tabla y añadirla a la lista de tablas
       Table newTable = new Table(name, new List<List<Field>>(), headers);
-      Tables.Add(newTable);
-
+      Table = newTable;
     }
 
     public void CreateDatabase(string databaseName)
@@ -83,95 +74,38 @@ namespace ApiInterface.Store
         throw new ArgumentException("El nombre de la base de datos no puede estar vacío.");
       }
 
-      // Aquí deberíamos verificar si la base de datos existe
-      // Por ahora, simularemos esta verificación
-      if (!DatabaseExists(databaseName))
-      {
-        throw new InvalidOperationException($"La base de datos '{databaseName}' no existe.");
-      }
-
       Database = databaseName;
+      Path = new DataPath(databaseName);
       Console.WriteLine($"Contexto establecido a la base de datos '{databaseName}'.");
     }
 
-    // Esta funcion compruba que una base de datos existe en el 
-    // Sistema de archivos. Simplemente es comprobar que databaseName existe en 
-    // el DataPath
-    private bool DatabaseExists(string databaseName)
-    {
-      return Path != null;
-    }
-
-    public string Database { get; private set; } = string.Empty;
-
     public void DropTable(string tableName)
     {
+      Console.WriteLine($"DROP TABLE {tableName} | Database: {Database}");
+      Path = new DataPath(Database);
       if (string.IsNullOrWhiteSpace(tableName))
       {
         throw new ArgumentException("El nombre de la tabla no puede estar vacío.");
       }
-
-      if (string.IsNullOrWhiteSpace(Database) || Path == null)
-      {
-        throw new InvalidOperationException("No se ha establecido una base de datos de contexto.");
-      }
-
-      // Verificar si la tabla existe
-      if (!TableExists(tableName))
-      {
-        throw new InvalidOperationException($"La tabla '{tableName}' no existe en la base de datos '{Database}'.");
-      }
-
-      // Eliminar la tabla
-      Console.WriteLine($"DROP TABLE {tableName}");
       Path.Drop(tableName);
+      Table = null;
       Console.WriteLine($"Tabla '{tableName}' eliminada exitosamente de la base de datos '{Database}'.");
     }
-
-    private bool TableExists(string tableName)
-    {
-      foreach (Table table in Tables)
-      {
-        if (table.Name == tableName)
-        {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    private bool IsTableEmpty(string tableName)
-    {
-      foreach (Table table in Tables)
-      {
-        if (table.Name == tableName)
-        {
-          return table.TableFields.Count == 0;
-        }
-      }
-      return false;
-    }
-
     public void Select(
         string tableName,
-        string column,
+        string selectedColumn,
         string? whereClause = null,
         string? likeWord = null,
         string? orderBy = null,
-        bool isAscending = true)
+        bool isAscending = true,
+        string? whereValue = null
+        )
     {
-      // Verificar si la tabla existe
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table == null)
-      {
-        throw new ArgumentException($"La tabla '{tableName}' no existe.");
-      }
-
-      string result = "";	
+      List<string> result = new List<string>();
 
       if (likeWord != null && whereClause != null)
       {
-        Match match = Regex.Match(whereClause, @"(\w+)\s*=\s*(\w+)");
+        Match match = Regex.Match(whereClause, @"(\w+)\s*LIKE\s*(\w+)");
         if (!match.Success)
         {
           throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
@@ -186,120 +120,138 @@ namespace ApiInterface.Store
           likeWord = likeMatch.Groups[1].Value;
         }
 
-        foreach (List<Field> row in table.TableFields)
+        foreach (List<Field> row in Table.TableFields)
         {
           foreach (Field field in row)
           {
-            if (field.Name == columnName && field.Value == value && field.Value.ToString().Contains(likeWord))
+            if (field.Name == columnName && field.Value.ToString().Contains(likeWord))
             {
-              result += field.Value.ToString() + " ";
+              foreach (Field innerField in row)
+              {
+                if (innerField.Name == selectedColumn || selectedColumn == "*")
+                {
+                  result.Add(innerField.Value.ToString());
+                }
+              }
             }
           }
-          result += "\n";
         }
 
         if (orderBy != null)
         {
           result = OrderBy(result, orderBy, isAscending);
         }
-        Console.WriteLine(result);
+        foreach (string line in result)
+        {
+          Console.WriteLine(line);
+        }
       }
-      
+      else if (whereClause != null && whereValue != null)
+      {
+        Console.WriteLine($"WHERE: {whereClause}");
+        Match match = Regex.Match(whereClause, @"(\w+)\s*\=\s*(\w+)");
+        if (!match.Success)
+        {
+          throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
+        }
+
+        string columnName = match.Groups[1].Value;
+        string value = whereValue;
+
+        foreach (List<Field> row in Table.TableFields)
+        {
+          foreach (Field field in row)
+          {
+            if (field.Name == columnName && field.Value.ToString().Equals(value) || field.Value.ToString().Contains(value))
+            {
+              foreach (Field innerField in row)
+              {
+                if (innerField.Name == selectedColumn || selectedColumn == "*")
+                {
+                  result.Add(innerField.Value.ToString());
+                }
+              }
+            }
+          }
+        }
+
+        if (orderBy != null)
+        {
+          result = OrderBy(result, orderBy, isAscending);
+        }
+
+        foreach (string line in result)
+        {
+          Console.WriteLine(line);
+        }
+      }
     }
 
-    private string OrderBy(string result, string orderBy, bool isAscending)
+    private List<string> OrderBy(List<string> result, string orderBy, bool isAscending)
     {
-      return result;
+      var ordered = result.OrderBy(item =>
+      {
+        // Intenta parsear el item como número
+        if (int.TryParse(item.ToString(), out int number))
+        {
+          return number;
+        }
+        // Si no es un número, trata el item como string
+        return int.MaxValue; // Para elementos no numéricos
+      })
+      .ThenBy(item => item); // Asegura un orden consistente para items con el mismo valor numérico
+
+      // Aplicar el orden ascendente o descendente
+      return isAscending ? ordered.ToList() : ordered.Reverse().ToList();
     }
 
     public void CreateIndex(string indexName, string tableName, string column)
     {
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table == null)
+      if (Table == null)
       {
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
-      if (table.HasIndex)
+      if (Table.HasIndex)
       {
         throw new ArgumentException($"La tabla '{tableName}' ya tiene un índice.");
       }
 
       TableIndex tableIndex = TableIndex.BTree;
 
-      if (indexName == "BSTREE"){
+      if (indexName == "BSTREE")
+      {
         tableIndex = TableIndex.BSTree;
       }
 
-      table.CreateIndex(tableIndex, column);
+      Table.CreateIndex(tableIndex, column);
     }
 
-    private List<Dictionary<string, object>> SelectColumns(List<Dictionary<string, object>> rows, List<string> columns)
-    {
-      return rows.Select(row => new Dictionary<string, object>(
-          row.Where(kvp => columns.Contains(kvp.Key))
-      )).ToList();
-    }
 
     public void Update(string tableName, Dictionary<string, object> setValues, string? whereClause = null)
     {
       // Verificar si la tabla existe
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table == null)
+      if (Table == null)
       {
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
-      // Obtener todas las filas de la tabla
-      List<Dictionary<string, object>> rows = GetTableRows(table);
-
-      // Aplicar la cláusula WHERE si existe
-      if (!string.IsNullOrEmpty(whereClause))
-      {
-        rows = ApplyWhereClause(rows, whereClause, table);
-      }
-
-      // Actualizar las filas
-      foreach (var row in rows)
-      {
-        foreach (var kvp in setValues)
-        {
-          if (row.ContainsKey(kvp.Key))
-          {
-            row[kvp.Key] = kvp.Value;
-          }
-        }
-      }
-
-      // Actualizar índices si es necesario
-      foreach (var column in setValues.Keys)
-      {
-       // if (table.HasIndex && table.IndexColumn == column)
-        {
-          new Data().UpdateIndex(table, column);
-        }
-      }
-
-      Console.WriteLine($"Se actualizaron {rows.Count} filas en la tabla '{tableName}'.");
-
-      // Guardar los cambios en el archivo
-      SaveTable(tableName);
     }
 
-    public void SaveTable(string tableName)
+    public void Save()
     {
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table != null && Path != null)
+      if (Table != null && Path != null)
       {
-        Path.SaveTableAs(tableName, table);
+        Path.SaveTableAs(Table.Name, Table, FileData);
       }
+      FileData = "";
     }
 
     public void Delete(string tableName, string? whereClause = null)
     {
+      Console.WriteLine($" INNER DELETE FROM {tableName} WHERE {whereClause}");
       // Verificar si la tabla existe
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table == null)
+      if (Table == null)
       {
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
@@ -309,42 +261,67 @@ namespace ApiInterface.Store
         throw new ArgumentException("La cláusula WHERE es requerida para eliminar filas.");
       }
 
-      Match match = Regex.Match(whereClause, @"(\w+)\s*=\s*(\w+)");
+      Match match = Regex.Match(whereClause, @"(\w+)\s*=\s*'?([^']+)'?");
       if (!match.Success)
       {
         throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
       }
 
       string columnName = match.Groups[1].Value;
-      string value = match.Groups[2].Value;
+      string value = match.Groups[2].Value.Replace("'", "").Replace("\"", "");
+      Console.WriteLine($" FROM {tableName} WHERE {columnName} = {value}");
 
-      foreach (List<Field> row in table.TableFields)
+      List<List<Field>> rowsToRemove = new List<List<Field>>();
+      foreach (List<Field> row in Table.TableFields)
       {
-        if (row.Any(field => field.Name == columnName && field.Value == value))
+        if (row.Any(field => (field.Value.Equals(value) || field.Value.ToString().Contains(value) ) && field.Name == columnName))
         {
-          table.TableFields.Remove(row);
-          table.Delete(int.Parse(row[0].Value));
+          rowsToRemove.Add(row);
         }
       }
 
+      foreach (List<Field> row in rowsToRemove)
+      {
+        Table.TableFields.Remove(row);
+      }
+
+      // Actualiza FileData
+      FileData = "";
+      foreach (List<Field> row in Table.TableFields)
+      {
+        foreach (Field field in row)
+        {
+          FileData += field.Value + "\t";
+        }
+        FileData += "\n";
+      }
+      Console.WriteLine(FileData);
 
     }
 
     public void Insert(string tableName, string[] values)
     {
-      Table? table = Tables.Find(t => t.Name == tableName);
-      if (table == null)
+      if (Table == null)
       {
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
       List<Field> fields = new List<Field>();
-      for (int i = 0; i < table.Headers.Count; i++)
+      for (int i = 0; i < Table.Headers.Count; i++)
       {
-        Field field = table.Headers.ElementAt(i);
-        fields.Add(new Field(field.Name, field.Type, field.Size, values[i]));
+        FileData += values[i] + "\t";
+        Field field = Table.Headers.ElementAt(i);
+        // Removes the quotes from the value
+        string value = values[i].Replace("\"", "").Replace("'", "");
+        fields.Add(new Field(field.Name, field.Type, field.Size, value));
       }
-      table.Insert(0, fields);
+      FileData += "\n"; 
+      if (Table.HasIndex){
+        Table.Insert(int.Parse(values[0]), fields);
+      } else {
+        Table.TableFields.Add(fields);
+      }
+      Console.WriteLine($"agregando en: {tableName} VALUES {string.Join(", ", values)} | Filas: {Table.TableFields.Count}");
     }
 
     public void SetTableAs(string name)
@@ -352,11 +329,11 @@ namespace ApiInterface.Store
       Table? table = Path.LoadTable(name);
       if (table != null)
       {
-        Tables.Add(table);
+        Table = table;
       }
     }
     public void SetDatabaseAs(string name)
-    { 
+    {
       Path = new(name);
     }
   }
@@ -369,7 +346,7 @@ namespace ApiInterface.Store
   {
     private string AppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private string Database;
-    private string? Table;
+    private string? TableName;
 
     public DataPath(string Name)
     {
@@ -379,26 +356,55 @@ namespace ApiInterface.Store
       Directory.CreateDirectory(databasePath);
     }
 
-    public void SaveTableAs(string name, Table data)
+    public void SaveTableAs(string name, Table data, string FileData)
     {
-      Table = name;
-      string filePath = GetTableFilePath();
-      string jsonData = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-      File.WriteAllText(filePath, jsonData);
-      Console.WriteLine($"Tabla '{name}' guardada exitosamente en {filePath}");
+      try
+      {
+        TableName = name;
+        string filePath = GetTableFilePath();
+        Console.WriteLine($"Saving table to {filePath}");
+        // Asegúrate de que el directorio existe
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+        string jsonData = JsonSerializer.Serialize(data, new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        File.WriteAllText(filePath + ".json", jsonData);
+
+        if (File.Exists(filePath + ".json"))
+        {
+            Console.WriteLine($"Tabla '{name}' guardada exitosamente en {filePath}");
+        }
+        else
+        {
+            Console.WriteLine($"Error: No se pudo verificar la existencia del archivo después de guardarlo.");
+        }
+
+
+        // Opens another file called TableName.table and writes the FileData
+        string tableFile = Path.Combine(Path.GetDirectoryName(filePath + ".json"), $"{name}.table");
+        File.WriteAllText(tableFile, FileData);
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"Error al guardar la tabla '{name}': {ex.Message}");
+      }
     }
 
     public Table? LoadTable(string name)
     {
-      Table = name;
+      TableName = name;
       string filePath = GetTableFilePath();
-      if (!File.Exists(filePath))
+      if (!File.Exists(filePath + ".json"))
       {
         Console.WriteLine($"La tabla '{name}' no existe en la base de datos '{Database}'.");
         return null;
       }
 
-      string jsonData = File.ReadAllText(filePath);
+      string jsonData = File.ReadAllText(filePath + ".json");
       Table? loadedData = JsonSerializer.Deserialize<Table>(jsonData);
       Console.WriteLine($"Tabla '{name}' cargada exitosamente desde {filePath}");
       return loadedData;
@@ -406,18 +412,19 @@ namespace ApiInterface.Store
 
     public void Drop(string name)
     {
-      Table = name;
+      TableName = name;
       string path = GetTableFilePath();
-      File.Delete(path);
+      File.Delete(path + ".json");
+      File.Delete(path + ".table");
     }
 
     private string GetTableFilePath()
     {
-      if (string.IsNullOrEmpty(Table))
+      if (string.IsNullOrEmpty(TableName))
       {
         throw new InvalidOperationException("Nombre de tabla no especificado.");
       }
-      return Path.Combine(AppDataPath, "DatabaseApp", Database, $"{Table}.json");
+      return Path.Combine(AppDataPath, "DatabaseApp", Database, $"{TableName}");
     }
   }
 

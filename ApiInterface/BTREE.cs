@@ -52,6 +52,34 @@ namespace ApiInterface.Structures
       }
     }
 
+    public void UpdateInnerData(int key, List<Field> value)
+    {
+      UpdateInnerData_aux(Root, key, value);
+    }
+
+    private void UpdateInnerData_aux(BTreeNode x, int key, List<Field> value)
+    {
+      int i = 0;
+      while (i < x.Keys.Count && key > x.Keys[i])
+      {
+        i++;
+      }
+      if (i < x.Keys.Count && key == x.Keys[i])
+      {
+        x.InnerData[i] = value;
+      } 
+      else if (x.IsLeaf)
+      {
+        Console.WriteLine("Key not found");
+      }
+      else
+      {
+        UpdateInnerData_aux(x.Children[i], key, value);
+      }
+    } 
+
+
+
     private void InsertNonFull(BTreeNode x, int key, List<Field> value)
     {
       int i = x.Keys.Count - 1;

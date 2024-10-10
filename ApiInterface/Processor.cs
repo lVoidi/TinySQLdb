@@ -12,11 +12,7 @@ namespace ApiInterface.Processor
   {
     internal static IProcessor Create(Request request)
     {
-      if (request.Type is RequestType.SQLSentence)
-      {
-        return new SQLSentenceProcessor(request);
-      }
-      throw new UnknownRequestTypeException();
+      return new SQLSentenceProcessor(request);
     }
   }
   internal class SQLSentenceProcessor(Request request) : IProcessor
@@ -37,7 +33,7 @@ namespace ApiInterface.Processor
       {
         Status = result,
         Request = this.Request,
-        ResponseBody = string.Empty
+        ResponseBody = "Success"
       };
     }
   }

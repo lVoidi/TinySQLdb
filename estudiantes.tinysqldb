@@ -7,7 +7,7 @@ CREATE TABLE Estudiantes(
   FechaNacimiento DATETIME
 );
 
-CREATE INDEX EstudianteId ON Estudiantes(ID) OF TYPE BTREE;
+CREATE INDEX EstudianteId ON Estudiantes(Nombre) OF TYPE BTREE;
 
 INSERT INTO Estudiantes VALUES (0, 'Isaac', 'Ramirez', 'Herrera', '2000-01-01 01:02:00');
 INSERT INTO Estudiantes VALUES (1, 'Julian', 'Ramirez', 'Campos', '2002-02-01 01:02:00');
@@ -33,4 +33,6 @@ INSERT INTO Estudiantes VALUES (20, 'Claudia', 'Ramirez', 'Reyes', '1987-09-21 0
 INSERT INTO Estudiantes VALUES (21, 'Fernanda', 'Ramirez', 'Espinoza', '1986-10-22 04:40:00');
 INSERT INTO Estudiantes VALUES (22, 'Javier', 'Ramirez', 'Nunez', '1985-11-23 05:50:00');
 
-SELECT * FROM Estudiantes WHERE PrimerApellido LIKE *mire*;
+SELECT Nombre FROM Estudiantes WHERE PrimerApellido = Ramirez ORDER BY Nombre Desc;
+SELECT Nombre FROM Estudiantes WHERE Nombre LIKE Ma ORDER BY Nombre ASC;
+DELETE FROM Estudiantes WHERE Nombre = 'Carlos';

@@ -1,0 +1,20 @@
+CREATE DATABASE Empresa;
+SET DATABASE Empresa; 
+CREATE TABLE Empleados(
+  Nombre VARCHAR(50),
+  Apellido VARCHAR(50),
+  Edad INT,
+  Departamento VARCHAR(50)
+);
+
+CREATE INDEX EmpleadoId ON Empleados(Nombre) OF TYPE BTREE;
+
+INSERT INTO Empleados VALUES (0, 'Isaac', 'Ramirez', 'Herrera', '2000-01-01 01:02:00');
+INSERT INTO Empleados VALUES (1, 'Julian', 'Ramirez', 'Campos', '2002-02-01 01:02:00');
+INSERT INTO Empleados VALUES (2, 'Alberto', 'Dengo', 'Prado', '2001-03-01 01:02:00');
+INSERT INTO Empleados VALUES (3, 'Carlos', 'Ramirez', 'Gonzalez', '1999-04-15 10:30:00');
+INSERT INTO Empleados VALUES (4, 'Laura', 'Ramirez', 'Martinez', '1998-05-20 11:45:00');
+INSERT INTO Empleados VALUES (5, 'Manuel', 'Perez', 'Ramirez', '1997-03-05 12:00:00');
+INSERT INTO Empleados VALUES (6, 'Silvia', 'Ramirez', 'Lopez', '1996-07-07 13:10:00');
+INSERT INTO Empleados VALUES (7, 'Pedro', 'Ramirez', 'Ramirez', '2003-08-08 14:20:00';
+

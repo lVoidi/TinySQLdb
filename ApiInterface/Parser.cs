@@ -19,7 +19,6 @@ namespace ApiInterface.Parser
       data = new();
       Sentences = AddSentences(script);
       OperationStatus result = OperationStatus.Success;
-      Stopwatch stopwatch = new();
       Console.WriteLine(script);
       if (Sentences.Count == 0)
       {
@@ -29,25 +28,40 @@ namespace ApiInterface.Parser
       foreach (string Sentence in Sentences)
       {
         Console.WriteLine($"PARSE: {Sentence}");
-        if ((Sentence.Contains("(") || Sentence.Contains(")")) && !HasCorrectParenthesis(Sentence))
+        if (!HasCorrectParenthesis(Sentence))
         {
+          Console.WriteLine("Error: Parentesis incorrectos");
           return OperationStatus.Error;
         }
+        Stopwatch stopwatch = new();
         stopwatch.Start();
-        result = Parse(Sentence);
+        try
+        {
+          result = Parse(Sentence);
+        }
+        catch (Exception e)
+        {
+          Console.WriteLine(e.Message);
+          return OperationStatus.Error;
+        }
         stopwatch.Stop();
-        Console.WriteLine($"TIME: {stopwatch.ElapsedMilliseconds}");
+        Console.WriteLine($"TIME: {stopwatch.ElapsedMilliseconds}ms");
+        Console.WriteLine($"RESULT: {result}");
         if (result == OperationStatus.Warning || result == OperationStatus.Error)
         {
           return result;
         }
       }
 
-      // Guarda los cambios de cada tabla 
-      foreach (Table table in data.Tables)
+      try 
       {
-        data.SaveTable(table.Name);
+        data.Save();
       }
+      catch (Exception e)
+      {
+        Console.WriteLine(e.Message);
+        return OperationStatus.Error;
+      } 
       return result;
     }
 
@@ -108,7 +122,6 @@ namespace ApiInterface.Parser
      */
     public static OperationStatus Parse(string sentence)
     {
-      sentence = sentence.ToUpper();
       string pattern;
       if (sentence.StartsWith("CREATE DATABASE"))
       {
@@ -134,12 +147,13 @@ namespace ApiInterface.Parser
         }
 
         string databaseName = matchDatabaseName.Groups[1].Value;
-        data.SetDatabaseAs(databaseName);
+        Console.WriteLine($"DatabaseName: {databaseName}");
+        data.SetDatabase(databaseName);
       }
       else if (sentence.StartsWith("CREATE TABLE"))
       {
         string patternTableName = @"CREATE\s+TABLE\s+(\w+)";
-        string patternTableContent = @"CREATE\s+TABLE\s+\w+\s*\(([^)]+)\)";
+        string patternTableContent = @"CREATE\s+TABLE\s+\w+\s*\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)";
         Match matchTableName = Regex.Match(sentence, patternTableName);
         Match matchTableContent = Regex.Match(sentence, patternTableContent);
 
@@ -150,25 +164,26 @@ namespace ApiInterface.Parser
 
         string name = matchTableName.Groups[1].Value;
         string content = matchTableContent.Groups[1].Value;
+        Console.WriteLine($"Content: {content}");
         string[] columns = content.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
         data.CreateTableAs(name, columns);
       }
       else if (sentence.StartsWith("CREATE INDEX"))
-      { 
-        pattern = @"CREATE\s+INDEX\s+(\w+)\s+ON\s+(\w+)\s*\((\w+)\)";
+      {
+        pattern = @"CREATE\s+INDEX\s+(\w+)\s+ON\s+(\w+)\s*\((\w+)\)(?:\s+OF\s+TYPE\s+(\w+))?";
         Match match = Regex.Match(sentence, pattern);
         if (!match.Success)
         {
           return OperationStatus.Error;
         }
-        string indexName = match.Groups[1].Value;
         string tableName = match.Groups[2].Value;
         string column = match.Groups[3].Value;
-        data.CreateIndex(indexName, tableName, column);
+        string indexType = match.Groups[4].Success ? match.Groups[4].Value : "none";
+        data.CreateIndex(indexType, tableName, column);
       }
       else if (sentence.StartsWith("INSERT"))
-      { 
-        pattern = @"INSERT\s+INTO\s+(\w+)\s*\(([^)]+)\)";
+      {
+        pattern = @"INSERT\s+INTO\s+(\w+)\s*VALUES\s*\(([^)]+)\)";
         Match match = Regex.Match(sentence, pattern);
         if (!match.Success)
         {
@@ -176,49 +191,91 @@ namespace ApiInterface.Parser
         }
         string tableName = match.Groups[1].Value;
         string columns = match.Groups[2].Value;
-        string[] columnsArray = columns.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);  
+        string[] columnsArray = columns.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+        Console.WriteLine($"Count: {data.Table.TableFields.Count}");
         data.Insert(tableName, columnsArray);
       }
       else if (sentence.StartsWith("SELECT"))
-      { 
-        pattern = @"SELECT\s+([\w\s,]+)\s+FROM\s+(\w+)\s*(WHERE\s+(.+))?";
+      {
+        pattern = @"SELECT ([\w\s,*]+) FROM (\w+) (WHERE ([\w\s=]+))? (ORDER BY ([\w\s]+(\s+ASC|DESC)?))?";
+
         Match match = Regex.Match(sentence, pattern);
         if (!match.Success)
         {
-            return OperationStatus.Error;
+          return OperationStatus.Error;
         }
-        string column = match.Groups[1].Value;
+        string column = match.Groups[1].Value.Trim();
         string tableName = match.Groups[2].Value;
-        string whereClause = match.Groups[4].Success ? match.Groups[4].Value.Trim() : null;
-        string orderBy = null;
-        
+        string whereClause = match.Groups[3].Success ? match.Groups[4].Value.Trim() : null;
+        string orderBy = match.Groups[5].Success ? match.Groups[6].Value.Trim() : null;
+
+        // Extraer el valor de comparación de la cláusula WHERE
+        string whereValue = null;
+        if (whereClause != null)
+        {
+            Match whereMatch = Regex.Match(whereClause, @"(\w+)\s*=\s*(\w+)");
+            if (whereMatch.Success)
+            {
+                string whereColumn = whereMatch.Groups[1].Value;
+                whereValue = whereMatch.Groups[2].Value;
+                Console.WriteLine($"Columna WHERE: {whereColumn}");
+                Console.WriteLine($"Valor WHERE: {whereValue}");
+            }
+        }
+
+        Console.WriteLine($"WHERE: {whereClause}");
+
         // Extraer la palabra después de LIKE
         string likeWord = null;
         if (whereClause != null)
         {
-            Match likeMatch = Regex.Match(whereClause, @"LIKE\s+\*(\w+)\*");
-            if (likeMatch.Success)
-            {
-                likeWord = likeMatch.Groups[1].Value;
-            }
+          Match likeMatch = Regex.Match(whereClause, @"LIKE\s+(\w+)"); // Updated pattern
+          if (likeMatch.Success)
+          {
+            likeWord = likeMatch.Groups[1].Value;
+          }
         }
 
-        pattern = @"ORDER\s+BY\s+(\w+)";
-        Match match = Regex.Match(sentence, pattern);
+        pattern = @"ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?";
+        match = Regex.Match(sentence, pattern);
+        string orderDirection = null;
         if (match.Success)
         {
           orderBy = match.Groups[1].Value;
+          orderDirection = match.Groups[2].Success ? match.Groups[2].Value : null;
         }
         bool isAscending = true;
-        if (orderBy != null)
+        if (orderDirection != null)
         {
-          isAscending = orderBy.ToLower().Contains("asc");
+          isAscending = orderDirection.ToUpper() == "ASC";
+        }
+        data.Select(tableName, column, whereClause, likeWord, orderBy, isAscending, whereValue);
+      }
+      else if (sentence.StartsWith("DELETE")) 
+      { 
+        pattern = @"DELETE\s+FROM\s+(\w+)\s+(WHERE\s+([\w\s=]+(?:'[^']*')?))?";
+        Match match = Regex.Match(sentence, pattern);
+        if (!match.Success)
+        {
+          return OperationStatus.Error;
+        }
+        string tableName = match.Groups[1].Value;
+        string whereClause = match.Groups[2].Success ? match.Groups[3].Value.Trim() : null;
+
+        // Extraer el valor de la cláusula WHERE
+        string whereValue = null;
+        if (whereClause != null)
+        {
+            Match whereMatch = Regex.Match(whereClause, @"(\w+)\s*=\s*'?([^']+)'?");
+            if (whereMatch.Success)
+            {
+                string whereColumn = whereMatch.Groups[1].Value;
+                whereValue = whereMatch.Groups[2].Value;
+            }
         }
 
-        // Aquí puedes usar likeWord en tu lógica de selección
-        data.Select(tableName, column, whereClause, likeWord, orderBy);
+        data.Delete(tableName, whereClause);
       }
-      else if (sentence.StartsWith("DELETE")) { }
       else if (sentence.StartsWith("UPDATE SET")) { }
       else if (sentence.StartsWith("DROP TABLE"))
       {
