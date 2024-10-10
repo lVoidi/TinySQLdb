@@ -43,45 +43,88 @@ namespace ApiInterface.Structures
       TableFields = tableFields;
     }
 
-    // Este insert debe depender del tipo de indice
-    // 1. Si TableIndex == None:
-    //    se recorre tableFields
-    // 2. Si TableIndex == BTree:
-    //    se recorre el BTree 
-    // 3. Si no: 
-    //    se recorre BSTree
-    public void Insert()
+    public void Insert(int key, Field field)
     {
+      if (!HasIndex)
+      {
+        TableFields.Add(field);
+      }
+      else if (Index == TableIndex.BTree)
+      {
+        BTree.Insert(key);
+        TableFields.Add(field);
+      }
+      else if (Index == TableIndex.BSTree)
+      {
+        BSTree.Insert(key);
+        TableFields.Add(field);
+      }
     }
 
-    public void Delete()
+    public void Delete(int key)
     {
+      if (!HasIndex)
+      {
+        Console.WriteLine("No se puede eliminar sin un índice.");
+      }
+      else if (Index == TableIndex.BTree)
+      {
+        BTree.Delete(key);
+        // Aquí deberías también eliminar el Field correspondiente de TableFields
+      }
+      else if (Index == TableIndex.BSTree)
+      {
+        BSTree.Delete(key);
+        // Aquí deberías también eliminar el Field correspondiente de TableFields
+      }
     }
 
-    // Recorrer todos los fields de List<Field> e imprimirlos con 
-    // Console.WriteLine()
     public override string ToString()
     {
-      return "";
+      string result = $"Tabla: {Name}\n";
+      foreach (var field in TableFields)
+      {
+        result += $"Campo: {field.Name}, Tipo: {field.Type}, Tamaño: {field.Size}\n";
+      }
+      return result;
     }
 
     public void CreateIndex(TableIndex index)
     {
+      if (HasIndex)
+      {
+        Console.WriteLine("Ya existe un índice para esta tabla.");
+        return;
+      }
+
       if (index == TableIndex.None)
       {
-
+        Console.WriteLine("No se puede crear un índice de tipo None.");
       }
       else if (index == TableIndex.BTree)
       {
-
+        BTree = new IndexBTree(3); // Asumimos un grado mínimo de 3 para el árbol B
+        foreach (var field in TableFields)
+        {
+          // Asumimos que el campo Name se puede convertir a int para la clave
+          BTree.Insert(int.Parse(field.Name));
+        }
+        HasIndex = true;
+        Index = TableIndex.BTree;
       }
       else
       {
-
+        BSTree = new IndexBSTree();
+        foreach (var field in TableFields)
+        {
+          // Asumimos que el campo Name se puede convertir a int para la clave
+          BSTree.Insert(int.Parse(field.Name));
+        }
+        HasIndex = true;
+        Index = TableIndex.BSTree;
       }
     }
   }
-
 
 
 
