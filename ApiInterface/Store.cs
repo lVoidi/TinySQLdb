@@ -241,6 +241,7 @@ namespace ApiInterface.Store
         tableIndex = TableIndex.BSTree;
       }
 
+      Path.AddIndex(tableName, indexName, tableIndex.ToString());
       Table.CreateIndex(tableIndex, column);
     }
 
@@ -378,14 +379,95 @@ namespace ApiInterface.Store
   {
     private string AppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private string Database;
+    private string SystemCatalogPath;
     private string? TableName;
 
     public DataPath(string Name)
     {
-      Database = Name;
-      // Crear el directorio de la base de datos si no existe
-      string databasePath = Path.Combine(AppDataPath, "DatabaseApp", Database);
-      Directory.CreateDirectory(databasePath);
+        Database = Name;
+        string databasePath = Path.Combine(AppDataPath, "DatabaseApp", Database);
+        SystemCatalogPath = Path.Combine(AppDataPath, "DatabaseApp", "SystemCatalog");
+        Directory.CreateDirectory(databasePath);
+        Directory.CreateDirectory(SystemCatalogPath);
+        InitializeSystemCatalog();
+        AddDatabase(Database);
+    }
+
+    private void InitializeSystemCatalog()
+    {
+        string[] catalogFiles = { "SystemDatabases", "SystemTables", "SystemColumns", "SystemIndexes" };
+        foreach (var file in catalogFiles)
+        {
+            string filePath = Path.Combine(SystemCatalogPath, file);
+            if (!File.Exists(filePath))
+            {
+                File.Create(filePath).Close();
+            }
+        }
+    }
+
+    public void AddDatabase(string databaseName)
+    {
+        string filePath = Path.Combine(SystemCatalogPath, "SystemDatabases");
+        using (var writer = new BinaryWriter(File.Open(filePath, FileMode.Append)))
+        {
+            writer.Write(databaseName);
+        }
+    }
+
+    public void AddTable(string tableName)
+    {
+        string filePath = Path.Combine(SystemCatalogPath, "SystemTables");
+        using (var writer = new BinaryWriter(File.Open(filePath, FileMode.Append)))
+        {
+            writer.Write(Database);
+            writer.Write(tableName);
+        }
+    }
+
+    public void AddIndex(string tableName, string indexName, string indexType)
+    {
+        string filePath = Path.Combine(SystemCatalogPath, "SystemIndexes");
+        using (var writer = new BinaryWriter(File.Open(filePath, FileMode.Append)))
+        {
+            writer.Write(Database);
+            writer.Write(tableName);
+            writer.Write(indexName);
+            writer.Write(indexType);
+        }
+    }
+
+    public List<string> GetDatabases()
+    {
+        string filePath = Path.Combine(SystemCatalogPath, "SystemDatabases");
+        List<string> databases = new List<string>();
+        using (var reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+        {
+            while (reader.BaseStream.Position < reader.BaseStream.Length)
+            {
+                databases.Add(reader.ReadString());
+            }
+        }
+        return databases;
+    }
+
+    public List<string> GetTables()
+    {
+        string filePath = Path.Combine(SystemCatalogPath, "SystemTables");
+        List<string> tables = new List<string>();
+        using (var reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+        {
+            while (reader.BaseStream.Position < reader.BaseStream.Length)
+            {
+                string db = reader.ReadString();
+                string table = reader.ReadString();
+                if (db == Database)
+                {
+                    tables.Add(table);
+                }
+            }
+        }
+        return tables;
     }
 
     public void SaveTableAs(string name, Table data, string FileData)
@@ -419,6 +501,7 @@ namespace ApiInterface.Store
         // Opens another file called TableName.table and writes the FileData
         string tableFile = Path.Combine(Path.GetDirectoryName(filePath + ".json"), $"{name}.table");
         File.WriteAllText(tableFile, FileData);
+        AddTable(name);
       }
       catch (Exception ex)
       {
