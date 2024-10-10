@@ -68,7 +68,7 @@ namespace ApiInterface.Structures
       }
       else if (Index == TableIndex.BSTree)
       {
-        BSTree.Insert(key);
+        BSTree.Insert(key, TableFields.Count);
       }
       TableFields.Add(field);
     }

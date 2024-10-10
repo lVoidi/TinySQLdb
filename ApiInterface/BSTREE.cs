@@ -8,13 +8,15 @@ namespace ApiInterface.Structures
 internal class IndexBSTreeNode
   {
     public int Key { get; set; }
+    public int Index { get; set; }
     public IndexBSTreeNode Left { get; set; }
     public IndexBSTreeNode Right { get; set; }
     public int Height { get; set; }
 
-    public IndexBSTreeNode(int key)
+    public IndexBSTreeNode(int key, int index)
     {
       Key = key;
+      Index = index;
       Height = 1;
     }
   }
@@ -71,22 +73,26 @@ internal class IndexBSTreeNode
       return y;
     }
 
-    public void Insert(int key)
+    public void Insert(int key, int index)
     {
-      root = InsertRec(root, key);
+      root = InsertRec(root, key, index);
     }
 
-    private IndexBSTreeNode InsertRec(IndexBSTreeNode node, int key)
+    private IndexBSTreeNode InsertRec(IndexBSTreeNode node, int key, int index)
     {
       if (node == null)
-        return new IndexBSTreeNode(key);
+        return new IndexBSTreeNode(key, index);
 
       if (key < node.Key)
-        node.Left = InsertRec(node.Left, key);
+        node.Left = InsertRec(node.Left, key, index);
       else if (key > node.Key)
-        node.Right = InsertRec(node.Right, key);
+        node.Right = InsertRec(node.Right, key, index);
       else
-        return node; // Duplicate keys not allowed
+      {
+        // Si la clave ya existe, actualizamos el índice
+        node.Index = index;
+        return node;
+      }
 
       UpdateHeight(node);
 
@@ -197,17 +203,17 @@ internal class IndexBSTreeNode
       return current;
     }
 
-    public bool Find(int key)
+    public IndexBSTreeNode Find(int key)
     {
       return FindRec(root, key);
     }
 
-    private bool FindRec(IndexBSTreeNode root, int key)
+    private IndexBSTreeNode FindRec(IndexBSTreeNode root, int key)
     {
       if (root == null)
-        return false;
+        return null;
       if (root.Key == key)
-        return true;
+        return root;
       if (key < root.Key)
         return FindRec(root.Left, key);
       return FindRec(root.Right, key);
