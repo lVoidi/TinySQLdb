@@ -72,7 +72,62 @@ namespace ApiInterface.Structures
       }
       TableFields.Add(field);
     }
-    
+
+    public void Update(string column, string value, string whereColumn, string whereValue)
+    {
+      List<Field> oldField = null;
+      List<Field> newField = null;
+      foreach (List<Field> row in TableFields)
+      {
+        foreach (Field field in row)
+        {
+          if (field.Name.Contains(whereColumn) && field.Value.Contains(whereValue))
+          {
+            oldField = row;
+            newField = new List<Field>(oldField); // Crea una copia de oldField
+            Console.WriteLine($"Found {whereColumn}:{whereValue} in {field.Name}:{field.Value}");
+            break;
+          }
+        }
+        if (oldField != null) break;
+      }
+
+      if (oldField != null && newField != null)
+      {
+        // Actualiza el campo específico en newField
+        Field fieldToUpdate = newField.Find(f => f.Name == column);
+        if (fieldToUpdate != null)
+        {
+          fieldToUpdate.Value = value;
+          
+          // Reemplaza oldField con newField en TableFields
+          int index = TableFields.IndexOf(oldField);
+          if (index != -1)
+          {
+            TableFields[index] = newField;
+          }
+          
+          if (HasIndex && whereColumn.Contains("index")){
+            if (Index == TableIndex.BTree){
+              BTree.UpdateInnerData(int.Parse(value), newField);
+            }
+            else if (Index == TableIndex.BSTree){
+              BSTree.UpdateInnerData(int.Parse(value), newField);
+            }
+          }
+
+          Console.WriteLine($"Updated {column} to {value}");
+        }
+        else
+        {
+          Console.WriteLine($"Column {column} not found in the row");
+        }
+      }
+      else
+      {
+        Console.WriteLine($"Row with {whereColumn}:{whereValue} not found");
+      }
+    }
     // TODO: Hacer que elimine el field correspondiente en TableFields
     public void Delete(int key)
     {

@@ -33,7 +33,7 @@ namespace ApiInterface.Processor
       {
         Status = result,
         Request = this.Request,
-        ResponseBody = "Success"
+        ResponseBody = result == OperationStatus.Success ? "Success" : "Error"
       };
     }
   }

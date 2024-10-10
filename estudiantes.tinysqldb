@@ -36,3 +36,4 @@ INSERT INTO Estudiantes VALUES (22, 'Javier', 'Ramirez', 'Nunez', '1985-11-23 05
 SELECT Nombre FROM Estudiantes WHERE PrimerApellido = Ramirez ORDER BY Nombre Desc;
 SELECT Nombre FROM Estudiantes WHERE Nombre LIKE Ma ORDER BY Nombre ASC;
 DELETE FROM Estudiantes WHERE Nombre = 'Carlos';
+UPDATE Estudiantes SET Nombre = 'Damian' WHERE Nombre = 'Julian';

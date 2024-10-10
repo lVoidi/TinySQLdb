@@ -228,7 +228,7 @@ namespace ApiInterface.Store
     }
 
 
-    public void Update(string tableName, Dictionary<string, object> setValues, string? whereClause = null)
+    public void Update(string tableName, string column, string value, string whereColumn, string whereValue)
     {
       // Verificar si la tabla existe
       if (Table == null)
@@ -236,6 +236,21 @@ namespace ApiInterface.Store
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
+      Console.WriteLine($"INSIDE: UPDATE {tableName} SET {column} = {value} WHERE {whereColumn} = {whereValue}");
+
+      Table.Update(column, value, whereColumn, whereValue);
+
+      // Actualiza FileData 
+      FileData = "";
+      foreach (List<Field> row in Table.TableFields)
+      {
+        foreach (Field field in row)
+        {
+          FileData += field.Value + "\t";
+        }
+        FileData += "\n";
+      }
+      Console.WriteLine(FileData);
     }
 
     public void Save()

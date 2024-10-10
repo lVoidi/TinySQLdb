@@ -276,7 +276,28 @@ namespace ApiInterface.Parser
 
         data.Delete(tableName, whereClause);
       }
-      else if (sentence.StartsWith("UPDATE SET")) { }
+      else if (sentence.StartsWith("UPDATE")) 
+      { 
+        pattern = @"UPDATE\s+(\w+)\s+SET\s+([\w\s]+)\s*=\s*([^'\s]+|'[^']+')\s+WHERE\s+([\w\s]+)\s*=\s*([^'\s]+|'[^']+')";
+        Match match = Regex.Match(sentence, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+          return OperationStatus.Error;
+        }
+        string tableName = match.Groups[1].Value;
+        string updateColumn = match.Groups[2].Value.Trim();
+        string updateValue = match.Groups[3].Value.Trim('\'').Trim('"');
+        string whereColumn = match.Groups[4].Value.Trim();
+        string whereValue = match.Groups[5].Value.Trim('\'').Trim('"');
+
+        Console.WriteLine($"Tabla: {tableName}");
+        Console.WriteLine($"Columna a actualizar: {updateColumn}");
+        Console.WriteLine($"Nuevo valor: {updateValue}");
+        Console.WriteLine($"Columna WHERE: {whereColumn}");
+        Console.WriteLine($"Valor WHERE: {whereValue}");
+
+        data.Update(tableName, updateColumn, updateValue, whereColumn, whereValue);
+      }
       else if (sentence.StartsWith("DROP TABLE"))
       {
         pattern = @"DROP\s+TABLE\s(\S+)";
