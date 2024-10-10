@@ -8,7 +8,7 @@ using System;
 
 namespace ApiInterface.Structures
 {
-  internal class Field
+  public class Field
   {
     public string Name;
     public string Type;
@@ -24,7 +24,7 @@ namespace ApiInterface.Structures
     }
   }
 
-  internal class Table
+  public class Table
   {
     // Estos pasan a ser instancias de sus respectivas clases cuando 
     // se llama CreateIndex
@@ -85,12 +85,24 @@ namespace ApiInterface.Structures
       else if (Index == TableIndex.BTree)
       {
         BTree.Delete(key);
-        // Aquí deberías también eliminar el Field correspondiente de TableFields
+        foreach (List<Field> row in TableFields){
+          foreach (Field field in row){
+            if (field.Value == key.ToString()){
+              row.Remove(field);
+            }
+          }
+        }
       }
       else if (Index == TableIndex.BSTree)
       {
         BSTree.Delete(key);
-        // Aquí deberías también eliminar el Field correspondiente de TableFields
+        foreach (List<Field> row in TableFields){
+          foreach (Field field in row){
+            if (field.Value == key.ToString()){
+              row.Remove(field);
+            }
+          }
+        }
       }
     }
 
@@ -124,7 +136,7 @@ namespace ApiInterface.Structures
       }
       else if (index == TableIndex.BTree)
       {
-        BTree = new IndexBTree(3); // Asumimos un grado mínimo de 3 para el árbol B
+        BTree = new IndexBTree(3);
         Index = TableIndex.BTree;
       }
       else
@@ -144,11 +156,11 @@ namespace ApiInterface.Structures
       }
       else if (Index == TableIndex.BSTree)
       {
-
+        return BSTree.Find(id);
       }
       else if (Index == TableIndex.BTree)
       {
-
+        return BTree.Search(id);
       }
       return null;
     }
@@ -161,13 +173,10 @@ namespace ApiInterface.Structures
       {
         foreach (Field column in row)
         {
-          if (whereColumn == "")
+          Match match = Regex.Match(column.Name, patternWhere);
+          if (match.Success)
           {
-            Match match = Regex.Match(column.Name, patternWhere);
-            if (match.Success)
-            {
-              whereColumn = column.Name;
-            }
+            whereColumn = column.Name;
           }
           else if (whereColumn == column.Name)
           {

@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using ApiInterface.Models;
 using ApiInterface.Store;
+using ApiInterface.Structures;
 namespace ApiInterface.Parser
 {
   public class SQLQueryProcessor
@@ -42,6 +43,11 @@ namespace ApiInterface.Parser
         }
       }
 
+      // Guarda los cambios de cada tabla 
+      foreach (Table table in data.Tables)
+      {
+        data.SaveTable(table.Name);
+      }
       return result;
     }
 
@@ -145,10 +151,61 @@ namespace ApiInterface.Parser
         string name = matchTableName.Groups[1].Value;
         string content = matchTableContent.Groups[1].Value;
         string[] columns = content.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+        data.CreateTableAs(name, columns);
       }
-      else if (sentence.StartsWith("CREATE INDEX")) { }
-      else if (sentence.StartsWith("INSERT")) { }
-      else if (sentence.StartsWith("SELECT")) { }
+      else if (sentence.StartsWith("CREATE INDEX"))
+      { 
+        pattern = @"CREATE\s+INDEX\s+(\w+)\s+ON\s+(\w+)\s*\((\w+)\)";
+        Match match = Regex.Match(sentence, pattern);
+        if (!match.Success)
+        {
+          return OperationStatus.Error;
+        }
+        string indexName = match.Groups[1].Value;
+        string tableName = match.Groups[2].Value;
+        string column = match.Groups[3].Value;
+        data.CreateIndex(indexName, tableName, column);
+      }
+      else if (sentence.StartsWith("INSERT"))
+      { 
+        pattern = @"INSERT\s+INTO\s+(\w+)\s*\(([^)]+)\)";
+        Match match = Regex.Match(sentence, pattern);
+        if (!match.Success)
+        {
+          return OperationStatus.Error;
+        }
+        string tableName = match.Groups[1].Value;
+        string columns = match.Groups[2].Value;
+        string[] columnsArray = columns.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);  
+        data.Insert(tableName, columnsArray);
+      }
+      else if (sentence.StartsWith("SELECT"))
+      { 
+        pattern = @"SELECT\s+([\w\s,]+)\s+FROM\s+(\w+)\s*(WHERE\s+(.+))?";
+        Match match = Regex.Match(sentence, pattern);
+        if (!match.Success)
+        {
+            return OperationStatus.Error;
+        }
+        string columns = match.Groups[1].Value;
+        string tableName = match.Groups[2].Value;
+        string whereClause = match.Groups[4].Success ? match.Groups[4].Value.Trim() : null;
+        string[] columnsArray = columns.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Extraer la palabra después de LIKE
+        string likeWord = null;
+        if (whereClause != null)
+        {
+            Match likeMatch = Regex.Match(whereClause, @"LIKE\s+\*(\w+)\*");
+            if (likeMatch.Success)
+            {
+                likeWord = likeMatch.Groups[1].Value;
+            }
+        }
+
+        // Aquí puedes usar likeWord en tu lógica de selección
+        data.Select(tableName, columnsArray, whereClause, likeWord);
+      }
       else if (sentence.StartsWith("DELETE")) { }
       else if (sentence.StartsWith("UPDATE SET")) { }
       else if (sentence.StartsWith("DROP TABLE"))

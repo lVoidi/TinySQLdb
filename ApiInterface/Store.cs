@@ -1,4 +1,5 @@
 using ApiInterface.Structures;
+using ApiInterface.Models;
 using System.Data;
 using System.Text.Json;
 using System.IO;
@@ -13,16 +14,15 @@ namespace ApiInterface.Store
     private string? Name;
     List<Dictionary<string, object>> Selected = new();
     private DataPath? Path = null;
-    private List<Table> Tables = new List<Table>();
+    public List<Table> Tables = new List<Table>();
 
-    public void CreateTableAs(string name, string fields)
+    public void CreateTableAs(string name, string[] fields)
     {
       Name = name;
-      string[] fieldDefinitions = fields.Split(',');
-      List<Field> tableFields = new List<Field>();
+      LinkedList<Field> headers = new LinkedList<Field>();
 
 
-      foreach (string fieldDef in fieldDefinitions)
+      foreach (string fieldDef in fields)
       {
         string[] parts = fieldDef.Trim().Split(' ');
         if (parts.Length < 2)
@@ -50,12 +50,11 @@ namespace ApiInterface.Store
           default:
             throw new ArgumentException($"Tipo de dato no soportado: {fieldType}");
         }
-
-        tableFields.Add(new Field(fieldName, fieldType, fieldSize));
+        headers.AddLast(new Field(fieldName, fieldType, fieldSize, ""));
       }
 
       // Crear una nueva tabla y añadirla a la lista de tablas
-      Table newTable = new Table(name, tableFields);
+      Table newTable = new Table(name, new List<List<Field>>(), headers);
       Tables.Add(newTable);
 
     }
@@ -156,6 +155,7 @@ namespace ApiInterface.Store
         List<string> columns,
         string? whereClause = null,
         string? orderBy = null,
+        string? likeWord = null,
         bool isAscending = true)
     {
       // Verificar si la tabla existe
@@ -179,6 +179,12 @@ namespace ApiInterface.Store
         ApplyOrderBy(rows, orderBy, isAscending);
       }
 
+      // Aplicar LIKE si se especifica
+      if (!string.IsNullOrEmpty(likeWord))
+      {
+        rows = ApplyLikeClause(rows, likeWord);
+      }
+
       // Seleccionar las columnas especificadas
       if (columns.Count > 0 && columns[0] != "*")
       {
@@ -188,18 +194,49 @@ namespace ApiInterface.Store
       return rows;
     }
 
+    private List<Dictionary<string, object>> ApplyLikeClause(List<Dictionary<string, object>> rows, string likeWord)
+    {
+      // Implementar la lógica para aplicar el LIKE
+      // Por ejemplo, puedes filtrar las filas que contienen la palabra clave
+      return rows.Where(row => row.Any(kvp => kvp.Value.ToString().Contains(likeWord))).ToList();
+    }
+
     private List<Dictionary<string, object>> GetTableRows(Table table)
     {
       List<Dictionary<string, object>> tableRows = new();
 
-      foreach (Field row in table.TableFields)
+      foreach (List<Field> row in table.TableFields)
       {
-
         Dictionary<string, object> rowDictionary = new();
-        rowDictionary.Add(row.Name, row.Type);
+        foreach (Field field in row)
+        {
+          rowDictionary.Add(field.Name, field.Value);
+        }
         tableRows.Add(rowDictionary);
       }
       return tableRows;
+    }
+
+    public void CreateIndex(string indexName, string tableName, string column)
+    {
+      Table? table = Tables.Find(t => t.Name == tableName);
+      if (table == null)
+      {
+        throw new ArgumentException($"La tabla '{tableName}' no existe.");
+      }
+
+      if (table.HasIndex)
+      {
+        throw new ArgumentException($"La tabla '{tableName}' ya tiene un índice.");
+      }
+
+      TableIndex tableIndex = TableIndex.BTree;
+
+      if (indexName == "BSTREE"){
+        tableIndex = TableIndex.BSTree;
+      }
+
+      table.CreateIndex(tableIndex, column);
     }
 
     private List<Dictionary<string, object>> ApplyWhereClause(List<Dictionary<string, object>> rows, string whereClause, Table table)
@@ -341,13 +378,7 @@ namespace ApiInterface.Store
       SaveTable(tableName);
     }
 
-    private void UpdateIndex(Table table, string column)
-    {
-      // TODO: Implementar la actualización del índice
-      Console.WriteLine($"Actualizando el índice para la columna '{column}' en la tabla '{table.Name}'.");
-    }
-
-    private void SaveTable(string tableName)
+    public void SaveTable(string tableName)
     {
       Table? table = Tables.Find(t => t.Name == tableName);
       if (table != null && Path != null)
@@ -395,76 +426,21 @@ namespace ApiInterface.Store
       SaveTable(tableName);
     }
 
-    public void Insert(string tableName, List<object> values)
+    public void Insert(string tableName, string[] values)
     {
-      // Verificar si la tabla existe
       Table? table = Tables.Find(t => t.Name == tableName);
       if (table == null)
       {
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
-      // Verificar si el número de valores coincide con el número de campos
-      if (values.Count != table.TableFields.Count)
+      List<Field> fields = new List<Field>();
+      for (int i = 0; i < table.Headers.Count; i++)
       {
-        throw new ArgumentException($"El número de valores ({values.Count}) no coincide con el número de campos en la tabla ({table.TableFields.Count}).");
+        Field field = table.Headers.ElementAt(i);
+        fields.Add(new Field(field.Name, field.Type, field.Size, values[i]));
       }
-
-      // Crear un nuevo diccionario para la fila
-      Dictionary<string, object> newRow = new Dictionary<string, object>();
-
-      // Validar y asignar los valores a cada campo
-      for (int i = 0; i < table.TableFields.Count; i++)
-      {
-        Field field = table.TableFields[i];
-        object value = values[i];
-
-        // Validar el tipo de dato
-        switch (field.Type.ToUpper())
-        {
-          case "INTEGER":
-            if (!int.TryParse(value.ToString(), out int intValue))
-              throw new ArgumentException($"El valor '{value}' no es válido para el campo INTEGER '{field.Name}'.");
-            newRow[field.Name] = intValue;
-            break;
-          case "DOUBLE":
-            if (!double.TryParse(value.ToString(), out double doubleValue))
-              throw new ArgumentException($"El valor '{value}' no es válido para el campo DOUBLE '{field.Name}'.");
-            newRow[field.Name] = doubleValue;
-            break;
-          case "DATETIME":
-            if (!DateTime.TryParse(value.ToString(), out DateTime dateTimeValue))
-              throw new ArgumentException($"El valor '{value}' no es válido para el campo DATETIME '{field.Name}'.");
-            newRow[field.Name] = dateTimeValue;
-            break;
-          case "VARCHAR":
-            string stringValue = value.ToString() ?? "";
-            if (field.Size.HasValue && stringValue.Length > field.Size.Value)
-              throw new ArgumentException($"El valor '{value}' excede la longitud máxima ({field.Size.Value}) para el campo VARCHAR '{field.Name}'.");
-            newRow[field.Name] = stringValue;
-            break;
-          default:
-            throw new ArgumentException($"Tipo de dato no soportado: {field.Type}");
-        }
-      }
-
-      // Agregar la nueva fila a la tabla
-      List<Dictionary<string, object>> rows = GetTableRows(table);
-      rows.Add(newRow);
-
-      // Actualizar la tabla con la nueva fila
-      table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
-
-      // Actualizar índices si es necesario
-      foreach (var field in table.TableFields)
-      {
-        UpdateIndex(table, field.Name);
-      }
-
-      Console.WriteLine($"Se insertó una nueva fila en la tabla '{tableName}'.");
-
-      // Guardar los cambios en el archivo
-      SaveTable(tableName);
+      table.Insert(0, fields);
     }
 
     public void SetTableAs(string name)
