@@ -1,22 +1,22 @@
 using System.Text.RegularExpressions;
 using ApiInterface.Models;
 using System;
-
+using System.Collections.Generic;
 
 namespace ApiInterface.Structures
 {
 internal class IndexBSTreeNode
   {
     public int Key { get; set; }
-    public int Index { get; set; }
+    public List<Field> InnerData { get; set; }
     public IndexBSTreeNode Left { get; set; }
     public IndexBSTreeNode Right { get; set; }
     public int Height { get; set; }
 
-    public IndexBSTreeNode(int key, int index)
+    public IndexBSTreeNode(int key, List<Field> innerData)
     {
       Key = key;
-      Index = index;
+      InnerData = innerData;
       Height = 1;
     }
   }
@@ -73,24 +73,24 @@ internal class IndexBSTreeNode
       return y;
     }
 
-    public void Insert(int key, int index)
+    public void Insert(int key, List<Field> innerData)
     {
-      root = InsertRec(root, key, index);
+      root = InsertRec(root, key, innerData);
     }
 
-    private IndexBSTreeNode InsertRec(IndexBSTreeNode node, int key, int index)
+    private IndexBSTreeNode InsertRec(IndexBSTreeNode node, int key, List<Field> innerData)
     {
       if (node == null)
-        return new IndexBSTreeNode(key, index);
+        return new IndexBSTreeNode(key, innerData);
 
       if (key < node.Key)
-        node.Left = InsertRec(node.Left, key, index);
+        node.Left = InsertRec(node.Left, key, innerData);
       else if (key > node.Key)
-        node.Right = InsertRec(node.Right, key, index);
+        node.Right = InsertRec(node.Right, key, innerData);
       else
       {
-        // Si la clave ya existe, actualizamos el índice
-        node.Index = index;
+        // Si la clave ya existe, actualizamos los datos internos
+        node.InnerData = innerData;
         return node;
       }
 
@@ -203,17 +203,17 @@ internal class IndexBSTreeNode
       return current;
     }
 
-    public IndexBSTreeNode Find(int key)
+    public List<Field> Find(int key)
     {
       return FindRec(root, key);
     }
 
-    private IndexBSTreeNode FindRec(IndexBSTreeNode root, int key)
+    private List<Field> FindRec(IndexBSTreeNode root, int key)
     {
       if (root == null)
         return null;
       if (root.Key == key)
-        return root;
+        return root.InnerData;
       if (key < root.Key)
         return FindRec(root.Left, key);
       return FindRec(root.Right, key);

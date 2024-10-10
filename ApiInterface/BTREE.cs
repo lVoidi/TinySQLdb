@@ -1,19 +1,22 @@
 using System;
 using System.Collections.Generic;
+using ApiInterface.Models;
 
 namespace ApiInterface.Structures
 {
   internal class IndexBTreeNode
   {
-    public List<KeyValuePair<int, int>> Keys { get; set; }
+    public List<int> Keys { get; set; }
     public List<IndexBTreeNode> Children { get; set; }
     public bool IsLeaf { get; set; }
+    public List<Field> InnerData { get; set; }
 
     public IndexBTreeNode(bool isLeaf)
     {
-      Keys = new List<KeyValuePair<int, int>>();
+      Keys = new List<int>();
       Children = new List<IndexBTreeNode>();
       IsLeaf = isLeaf;
+      InnerData = new List<Field>();
     }
   }
 
@@ -28,7 +31,7 @@ namespace ApiInterface.Structures
       this.t = t;
     }
 
-    public void Insert(int key, int index)
+    public void Insert(int key, List<Field> fields)
     {
       IndexBTreeNode r = root;
 
@@ -38,31 +41,34 @@ namespace ApiInterface.Structures
         root = s;
         s.Children.Add(r);
         SplitChild(s, 0, r);
-        InsertNonFull(s, key, index);
+        InsertNonFull(s, key, fields);
       }
       else
       {
-        InsertNonFull(r, key, index);
+        InsertNonFull(r, key, fields);
       }
     }
 
-    private void InsertNonFull(IndexBTreeNode x, int key, int index)
+    private void InsertNonFull(IndexBTreeNode x, int key, List<Field> fields)
     {
       int i = x.Keys.Count - 1;
 
       if (x.IsLeaf)
       {
-        x.Keys.Add(new KeyValuePair<int, int>(0, 0));
-        while (i >= 0 && key < x.Keys[i].Key)
+        x.Keys.Add(0);
+        x.InnerData.Add(null);
+        while (i >= 0 && key < x.Keys[i])
         {
           x.Keys[i + 1] = x.Keys[i];
+          x.InnerData[i + 1] = x.InnerData[i];
           i--;
         }
-        x.Keys[i + 1] = new KeyValuePair<int, int>(key, index);
+        x.Keys[i + 1] = key;
+        x.InnerData[i + 1] = fields[0]; // Asumimos que solo se inserta un Field por clave
       }
       else
       {
-        while (i >= 0 && key < x.Keys[i].Key)
+        while (i >= 0 && key < x.Keys[i])
         {
           i--;
         }
@@ -71,12 +77,12 @@ namespace ApiInterface.Structures
         if (x.Children[i].Keys.Count == (2 * t - 1))
         {
           SplitChild(x, i, x.Children[i]);
-          if (key > x.Keys[i].Key)
+          if (key > x.Keys[i])
           {
             i++;
           }
         }
-        InsertNonFull(x.Children[i], key, index);
+        InsertNonFull(x.Children[i], key, fields);
       }
     }
 
@@ -85,10 +91,12 @@ namespace ApiInterface.Structures
       IndexBTreeNode z = new IndexBTreeNode(y.IsLeaf);
       x.Children.Insert(i + 1, z);
       x.Keys.Insert(i, y.Keys[t - 1]);
+      x.InnerData.Insert(i, y.InnerData[t - 1]);
 
       for (int j = 0; j < t - 1; j++)
       {
         z.Keys.Add(y.Keys[j + t]);
+        z.InnerData.Add(y.InnerData[j + t]);
       }
 
       if (!y.IsLeaf)
@@ -101,24 +109,25 @@ namespace ApiInterface.Structures
       }
 
       y.Keys.RemoveRange(t - 1, t);
+      y.InnerData.RemoveRange(t - 1, t);
     }
 
-    public KeyValuePair<int, int>? Find(int key)
+    public Field Find(int key)
     {
       return Search(root, key);
     }
 
-    private KeyValuePair<int, int>? Search(IndexBTreeNode x, int key)
+    private Field Search(IndexBTreeNode x, int key)
     {
       int i = 0;
-      while (i < x.Keys.Count && key > x.Keys[i].Key)
+      while (i < x.Keys.Count && key > x.Keys[i])
       {
         i++;
       }
 
-      if (i < x.Keys.Count && key == x.Keys[i].Key)
+      if (i < x.Keys.Count && key == x.Keys[i])
       {
-        return x.Keys[i];
+        return x.InnerData[i];
       }
 
       if (x.IsLeaf)
@@ -146,7 +155,7 @@ namespace ApiInterface.Structures
     {
       int idx = FindKeyIndex(x, key);
 
-      if (idx < x.Keys.Count && x.Keys[idx].Key == key)
+      if (idx < x.Keys.Count && x.Keys[idx] == key)
       {
         if (x.IsLeaf)
           DeleteFromLeaf(x, idx);
@@ -176,7 +185,7 @@ namespace ApiInterface.Structures
     private int FindKeyIndex(IndexBTreeNode x, int key)
     {
       int idx = 0;
-      while (idx < x.Keys.Count && x.Keys[idx].Key < key)
+      while (idx < x.Keys.Count && x.Keys[idx] < key)
         ++idx;
       return idx;
     }
@@ -191,19 +200,19 @@ namespace ApiInterface.Structures
 
     private void DeleteFromNonLeaf(IndexBTreeNode x, int idx)
     {
-      int k = x.Keys[idx].Key;
+      int k = x.Keys[idx];
 
       if (x.Children[idx].Keys.Count >= t)
       {
-        KeyValuePair<int, int> pred = GetPred(x, idx);
+        int pred = GetPred(x, idx);
         x.Keys[idx] = pred;
-        DeleteInternal(x.Children[idx], pred.Key);
+        DeleteInternal(x.Children[idx], pred);
       }
       else if (x.Children[idx + 1].Keys.Count >= t)
       {
-        KeyValuePair<int, int> succ = GetSucc(x, idx);
+        int succ = GetSucc(x, idx);
         x.Keys[idx] = succ;
-        DeleteInternal(x.Children[idx + 1], succ.Key);
+        DeleteInternal(x.Children[idx + 1], succ);
       }
       else
       {
@@ -212,7 +221,7 @@ namespace ApiInterface.Structures
       }
     }
 
-    private KeyValuePair<int, int> GetPred(IndexBTreeNode x, int idx)
+    private int GetPred(IndexBTreeNode x, int idx)
     {
       IndexBTreeNode cur = x.Children[idx];
       while (!cur.IsLeaf)
@@ -221,7 +230,7 @@ namespace ApiInterface.Structures
       return cur.Keys[cur.Keys.Count - 1];
     }
 
-    private KeyValuePair<int, int> GetSucc(IndexBTreeNode x, int idx)
+    private int GetSucc(IndexBTreeNode x, int idx)
     {
       IndexBTreeNode cur = x.Children[idx + 1];
       while (!cur.IsLeaf)

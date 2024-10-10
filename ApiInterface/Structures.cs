@@ -64,11 +64,11 @@ namespace ApiInterface.Structures
         return;
       if (Index == TableIndex.BTree)
       {
-        BTree.Insert(key, TableFields.Count);
+        BTree.Insert(key, field);
       }
       else if (Index == TableIndex.BSTree)
       {
-        BSTree.Insert(key, TableFields.Count);
+        BSTree.Insert(key, field);
       }
       TableFields.Add(field);
     }
