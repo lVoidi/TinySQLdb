@@ -1,17 +1,17 @@
-using ApiInterface.Models;
 using System;
+using System.Collections.Generic;
 
 namespace ApiInterface.Structures
 {
-internal class IndexBTreeNode
+  internal class IndexBTreeNode
   {
-    public List<int> Keys { get; set; }
+    public List<KeyValuePair<int, int>> Keys { get; set; }
     public List<IndexBTreeNode> Children { get; set; }
     public bool IsLeaf { get; set; }
 
     public IndexBTreeNode(bool isLeaf)
     {
-      Keys = new List<int>();
+      Keys = new List<KeyValuePair<int, int>>();
       Children = new List<IndexBTreeNode>();
       IsLeaf = isLeaf;
     }
@@ -28,7 +28,7 @@ internal class IndexBTreeNode
       this.t = t;
     }
 
-    public void Insert(int key)
+    public void Insert(int key, int index)
     {
       IndexBTreeNode r = root;
 
@@ -38,31 +38,31 @@ internal class IndexBTreeNode
         root = s;
         s.Children.Add(r);
         SplitChild(s, 0, r);
-        InsertNonFull(s, key);
+        InsertNonFull(s, key, index);
       }
       else
       {
-        InsertNonFull(r, key);
+        InsertNonFull(r, key, index);
       }
     }
 
-    private void InsertNonFull(IndexBTreeNode x, int key)
+    private void InsertNonFull(IndexBTreeNode x, int key, int index)
     {
       int i = x.Keys.Count - 1;
 
       if (x.IsLeaf)
       {
-        x.Keys.Add(0);
-        while (i >= 0 && key < x.Keys[i])
+        x.Keys.Add(new KeyValuePair<int, int>(0, 0));
+        while (i >= 0 && key < x.Keys[i].Key)
         {
           x.Keys[i + 1] = x.Keys[i];
           i--;
         }
-        x.Keys[i + 1] = key;
+        x.Keys[i + 1] = new KeyValuePair<int, int>(key, index);
       }
       else
       {
-        while (i >= 0 && key < x.Keys[i])
+        while (i >= 0 && key < x.Keys[i].Key)
         {
           i--;
         }
@@ -71,12 +71,12 @@ internal class IndexBTreeNode
         if (x.Children[i].Keys.Count == (2 * t - 1))
         {
           SplitChild(x, i, x.Children[i]);
-          if (key > x.Keys[i])
+          if (key > x.Keys[i].Key)
           {
             i++;
           }
         }
-        InsertNonFull(x.Children[i], key);
+        InsertNonFull(x.Children[i], key, index);
       }
     }
 
@@ -103,27 +103,27 @@ internal class IndexBTreeNode
       y.Keys.RemoveRange(t - 1, t);
     }
 
-    public bool Find(int key)
+    public KeyValuePair<int, int>? Find(int key)
     {
-      return Search(root, key) != null;
+      return Search(root, key);
     }
 
-    private IndexBTreeNode Search(IndexBTreeNode x, int key)
+    private KeyValuePair<int, int>? Search(IndexBTreeNode x, int key)
     {
       int i = 0;
-      while (i < x.Keys.Count && key > x.Keys[i])
+      while (i < x.Keys.Count && key > x.Keys[i].Key)
       {
         i++;
       }
 
-      if (i < x.Keys.Count && key == x.Keys[i])
+      if (i < x.Keys.Count && key == x.Keys[i].Key)
       {
-        return x;
+        return x.Keys[i];
       }
 
       if (x.IsLeaf)
       {
-        return new IndexBTreeNode(true);
+        return null;
       }
 
       return Search(x.Children[i], key);
@@ -146,7 +146,7 @@ internal class IndexBTreeNode
     {
       int idx = FindKeyIndex(x, key);
 
-      if (idx < x.Keys.Count && x.Keys[idx] == key)
+      if (idx < x.Keys.Count && x.Keys[idx].Key == key)
       {
         if (x.IsLeaf)
           DeleteFromLeaf(x, idx);
@@ -176,7 +176,7 @@ internal class IndexBTreeNode
     private int FindKeyIndex(IndexBTreeNode x, int key)
     {
       int idx = 0;
-      while (idx < x.Keys.Count && x.Keys[idx] < key)
+      while (idx < x.Keys.Count && x.Keys[idx].Key < key)
         ++idx;
       return idx;
     }
@@ -191,19 +191,19 @@ internal class IndexBTreeNode
 
     private void DeleteFromNonLeaf(IndexBTreeNode x, int idx)
     {
-      int k = x.Keys[idx];
+      int k = x.Keys[idx].Key;
 
       if (x.Children[idx].Keys.Count >= t)
       {
-        int pred = GetPred(x, idx);
+        KeyValuePair<int, int> pred = GetPred(x, idx);
         x.Keys[idx] = pred;
-        DeleteInternal(x.Children[idx], pred);
+        DeleteInternal(x.Children[idx], pred.Key);
       }
       else if (x.Children[idx + 1].Keys.Count >= t)
       {
-        int succ = GetSucc(x, idx);
+        KeyValuePair<int, int> succ = GetSucc(x, idx);
         x.Keys[idx] = succ;
-        DeleteInternal(x.Children[idx + 1], succ);
+        DeleteInternal(x.Children[idx + 1], succ.Key);
       }
       else
       {
@@ -212,7 +212,7 @@ internal class IndexBTreeNode
       }
     }
 
-    private int GetPred(IndexBTreeNode x, int idx)
+    private KeyValuePair<int, int> GetPred(IndexBTreeNode x, int idx)
     {
       IndexBTreeNode cur = x.Children[idx];
       while (!cur.IsLeaf)
@@ -221,7 +221,7 @@ internal class IndexBTreeNode
       return cur.Keys[cur.Keys.Count - 1];
     }
 
-    private int GetSucc(IndexBTreeNode x, int idx)
+    private KeyValuePair<int, int> GetSucc(IndexBTreeNode x, int idx)
     {
       IndexBTreeNode cur = x.Children[idx + 1];
       while (!cur.IsLeaf)
