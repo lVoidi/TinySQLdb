@@ -187,10 +187,10 @@ namespace ApiInterface.Parser
         {
             return OperationStatus.Error;
         }
-        string columns = match.Groups[1].Value;
+        string column = match.Groups[1].Value;
         string tableName = match.Groups[2].Value;
         string whereClause = match.Groups[4].Success ? match.Groups[4].Value.Trim() : null;
-        string[] columnsArray = columns.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+        string orderBy = null;
         
         // Extraer la palabra después de LIKE
         string likeWord = null;
@@ -203,8 +203,20 @@ namespace ApiInterface.Parser
             }
         }
 
+        pattern = @"ORDER\s+BY\s+(\w+)";
+        Match match = Regex.Match(sentence, pattern);
+        if (match.Success)
+        {
+          orderBy = match.Groups[1].Value;
+        }
+        bool isAscending = true;
+        if (orderBy != null)
+        {
+          isAscending = orderBy.ToLower().Contains("asc");
+        }
+
         // Aquí puedes usar likeWord en tu lógica de selección
-        data.Select(tableName, columnsArray, whereClause, likeWord);
+        data.Select(tableName, column, whereClause, likeWord, orderBy);
       }
       else if (sentence.StartsWith("DELETE")) { }
       else if (sentence.StartsWith("UPDATE SET")) { }
@@ -216,6 +228,8 @@ namespace ApiInterface.Parser
         {
           return OperationStatus.Error;
         }
+        string tableName = matchTableName.Groups[1].Value;
+        data.DropTable(tableName);
       }
       return OperationStatus.Success;
     }

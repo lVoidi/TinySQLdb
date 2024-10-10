@@ -1,8 +1,10 @@
+using System.Text.RegularExpressions;
 using ApiInterface.Structures;
 using ApiInterface.Models;
 using System.Data;
 using System.Text.Json;
 using System.IO;
+using System.Data.Common;
 namespace ApiInterface.Store
 {
   /*
@@ -150,12 +152,12 @@ namespace ApiInterface.Store
       return false;
     }
 
-    public List<Dictionary<string, object>> Select(
+    public void Select(
         string tableName,
-        List<string> columns,
+        string column,
         string? whereClause = null,
-        string? orderBy = null,
         string? likeWord = null,
+        string? orderBy = null,
         bool isAscending = true)
     {
       // Verificar si la tabla existe
@@ -165,56 +167,49 @@ namespace ApiInterface.Store
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
-      List<Dictionary<string, object>> rows = GetTableRows(table);
+      string result = "";	
 
-      // Aplicar la cláusula WHERE si existe
-      if (!string.IsNullOrEmpty(whereClause))
+      if (likeWord != null && whereClause != null)
       {
-        rows = ApplyWhereClause(rows, whereClause, table);
-      }
-
-      // Aplicar ORDER BY si se especifica
-      if (!string.IsNullOrEmpty(orderBy))
-      {
-        ApplyOrderBy(rows, orderBy, isAscending);
-      }
-
-      // Aplicar LIKE si se especifica
-      if (!string.IsNullOrEmpty(likeWord))
-      {
-        rows = ApplyLikeClause(rows, likeWord);
-      }
-
-      // Seleccionar las columnas especificadas
-      if (columns.Count > 0 && columns[0] != "*")
-      {
-        rows = SelectColumns(rows, columns);
-      }
-
-      return rows;
-    }
-
-    private List<Dictionary<string, object>> ApplyLikeClause(List<Dictionary<string, object>> rows, string likeWord)
-    {
-      // Implementar la lógica para aplicar el LIKE
-      // Por ejemplo, puedes filtrar las filas que contienen la palabra clave
-      return rows.Where(row => row.Any(kvp => kvp.Value.ToString().Contains(likeWord))).ToList();
-    }
-
-    private List<Dictionary<string, object>> GetTableRows(Table table)
-    {
-      List<Dictionary<string, object>> tableRows = new();
-
-      foreach (List<Field> row in table.TableFields)
-      {
-        Dictionary<string, object> rowDictionary = new();
-        foreach (Field field in row)
+        Match match = Regex.Match(whereClause, @"(\w+)\s*=\s*(\w+)");
+        if (!match.Success)
         {
-          rowDictionary.Add(field.Name, field.Value);
+          throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
         }
-        tableRows.Add(rowDictionary);
+
+        string columnName = match.Groups[1].Value;
+        string value = match.Groups[2].Value;
+
+        Match likeMatch = Regex.Match(whereClause, @"LIKE\s+\*(\w+)\*");
+        if (likeMatch.Success)
+        {
+          likeWord = likeMatch.Groups[1].Value;
+        }
+
+        foreach (List<Field> row in table.TableFields)
+        {
+          foreach (Field field in row)
+          {
+            if (field.Name == columnName && field.Value == value && field.Value.ToString().Contains(likeWord))
+            {
+              result += field.Value.ToString() + " ";
+            }
+          }
+          result += "\n";
+        }
+
+        if (orderBy != null)
+        {
+          result = OrderBy(result, orderBy, isAscending);
+        }
+        Console.WriteLine(result);
       }
-      return tableRows;
+      
+    }
+
+    private string OrderBy(string result, string orderBy, bool isAscending)
+    {
+      return result;
     }
 
     public void CreateIndex(string indexName, string tableName, string column)
@@ -237,93 +232,6 @@ namespace ApiInterface.Store
       }
 
       table.CreateIndex(tableIndex, column);
-    }
-
-    private List<Dictionary<string, object>> ApplyWhereClause(List<Dictionary<string, object>> rows, string whereClause, Table table)
-    {
-      // Parsear la cláusula WHERE
-      string[] parts = whereClause.Split(' ');
-      if (parts.Length != 3)
-      {
-        throw new ArgumentException("Cláusula WHERE inválida.");
-      }
-
-      string columnName = parts[0];
-      string compareOperator = parts[1];
-      string value = parts[2];
-
-      // Verificar si existe un índice para la columna
-      if (table.HasIndex && table.IndexColumns.Contains(columnName))
-      {
-        // Usar el índice para la búsqueda
-        return UseIndexForSearch(table, columnName, compareOperator, value);
-      }
-      else
-      {
-        // Realizar una búsqueda secuencial
-        return rows.Where(row => CompareValue(row[columnName], compareOperator, value)).ToList();
-      }
-    }
-
-    private List<Dictionary<string, object>> UseIndexForSearch(Table table, string columnName, string compareOperator, string value)
-    {
-      // TODO: Implementar la búsqueda utilizando el índice
-      // Esta es una implementación de ejemplo
-      return new List<Dictionary<string, object>>();
-    }
-
-    private bool CompareValue(object rowValue, string compareOperator, string value)
-    {
-      // TODO: Implementar la comparación según el operador
-      // Esta es una implementación de ejemplo
-      return true;
-    }
-
-    private void ApplyOrderBy(List<Dictionary<string, object>> rows, string orderByColumn, bool isAscending)
-    {
-      // Implementar Quicksort para ordenar las filas
-      QuickSort(rows, 0, rows.Count - 1, orderByColumn, isAscending);
-    }
-
-    private void QuickSort(List<Dictionary<string, object>> rows, int low, int high, string orderByColumn, bool isAscending)
-    {
-      if (low < high)
-      {
-        int partitionIndex = Partition(rows, low, high, orderByColumn, isAscending);
-
-        QuickSort(rows, low, partitionIndex - 1, orderByColumn, isAscending);
-        QuickSort(rows, partitionIndex + 1, high, orderByColumn, isAscending);
-      }
-    }
-
-    private int Partition(List<Dictionary<string, object>> rows, int low, int high, string orderByColumn, bool isAscending)
-    {
-      var pivot = rows[high][orderByColumn];
-      int i = low - 1;
-
-      for (int j = low; j < high; j++)
-      {
-        if (CompareForSort(rows[j][orderByColumn], pivot, isAscending) <= 0)
-        {
-          i++;
-          var temp = rows[i];
-          rows[i] = rows[j];
-          rows[j] = temp;
-        }
-      }
-
-      var temp1 = rows[i + 1];
-      rows[i + 1] = rows[high];
-      rows[high] = temp1;
-
-      return i + 1;
-    }
-
-    private int CompareForSort(object a, object b, bool isAscending)
-    {
-      // TODO: Implementar la comparación según el tipo de datos
-      // Esta es una implementación de ejemplo
-      return 0;
     }
 
     private List<Dictionary<string, object>> SelectColumns(List<Dictionary<string, object>> rows, List<string> columns)
@@ -396,34 +304,30 @@ namespace ApiInterface.Store
         throw new ArgumentException($"La tabla '{tableName}' no existe.");
       }
 
-      // Obtener todas las filas de la tabla
-      List<Dictionary<string, object>> rows = GetTableRows(table);
-
-      // Si hay una cláusula WHERE, aplicarla para filtrar las filas a eliminar
-      if (!string.IsNullOrEmpty(whereClause))
+      if (string.IsNullOrEmpty(whereClause))
       {
-        var rowsToDelete = ApplyWhereClause(rows, whereClause, table);
-        rows = rows.Except(rowsToDelete).ToList();
-      }
-      else
-      {
-        // Si no hay cláusula WHERE, eliminar todas las filas
-        rows.Clear();
+        throw new ArgumentException("La cláusula WHERE es requerida para eliminar filas.");
       }
 
-      // Actualizar la tabla con las filas restantes
-      table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
-
-      // Actualizar índices si es necesario
-      if (table.HasIndex)
+      Match match = Regex.Match(whereClause, @"(\w+)\s*=\s*(\w+)");
+      if (!match.Success)
       {
-        //UpdateIndex(table, field.Name);
+        throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
       }
 
-      Console.WriteLine($"Se eliminaron {rows.Count} filas de la tabla '{tableName}'.");
+      string columnName = match.Groups[1].Value;
+      string value = match.Groups[2].Value;
 
-      // Guardar los cambios en el archivo
-      SaveTable(tableName);
+      foreach (List<Field> row in table.TableFields)
+      {
+        if (row.Any(field => field.Name == columnName && field.Value == value))
+        {
+          table.TableFields.Remove(row);
+          table.Delete(int.Parse(row[0].Value));
+        }
+      }
+
+
     }
 
     public void Insert(string tableName, string[] values)
