@@ -1,0 +1,36 @@
+CREATE DATABASE Universidad;
+SET DATABASE Universidad;
+CREATE TABLE Estudiantes(
+  Nombre VARCHAR(50),
+  PrimerApellido VARCHAR(50),
+  SegundoApellido VARCHAR(50),
+  FechaNacimiento DATETIME
+);
+
+CREATE INDEX EstudianteId ON Estudiantes(ID) OF TYPE BTREE;
+
+INSERT INTO Estudiantes VALUES (0, 'Isaac', 'Ramirez', 'Herrera', '2000-01-01 01:02:00');
+INSERT INTO Estudiantes VALUES (1, 'Julian', 'Ramirez', 'Campos', '2002-02-01 01:02:00');
+INSERT INTO Estudiantes VALUES (2, 'Alberto', 'Dengo', 'Prado', '2001-03-01 01:02:00');
+INSERT INTO Estudiantes VALUES (3, 'Carlos', 'Ramirez', 'Gonzalez', '1999-04-15 10:30:00');
+INSERT INTO Estudiantes VALUES (4, 'Laura', 'Ramirez', 'Martinez', '1998-05-20 11:45:00');
+INSERT INTO Estudiantes VALUES (5, 'Manuel', 'Perez', 'Ramirez', '1997-03-05 12:00:00');
+INSERT INTO Estudiantes VALUES (6, 'Silvia', 'Ramirez', 'Lopez', '1996-07-07 13:10:00');
+INSERT INTO Estudiantes VALUES (7, 'Pedro', 'Ramirez', 'Ramirez', '2003-08-08 14:20:00');
+INSERT INTO Estudiantes VALUES (8, 'Elena', 'Sanchez', 'Ramirez', '2001-09-09 15:30:00');
+INSERT INTO Estudiantes VALUES (9, 'Marcos', 'Ramirez', 'Vega', '2000-10-10 16:40:00');
+INSERT INTO Estudiantes VALUES (10, 'Ana', 'Ramirez', 'Hernandez', '1995-11-11 17:50:00');
+INSERT INTO Estudiantes VALUES (11, 'Luis', 'Morales', 'Ramirez', '2004-12-12 18:00:00');
+INSERT INTO Estudiantes VALUES (12, 'Valeria', 'Gomez', 'Ramirez', '2005-01-13 19:10:00');
+INSERT INTO Estudiantes VALUES (13, 'Oscar', 'Ramirez', 'Moreno', '1993-02-14 20:20:00');
+INSERT INTO Estudiantes VALUES (14, 'Diana', 'Ramirez', 'Jimenez', '1994-03-15 21:30:00');
+INSERT INTO Estudiantes VALUES (15, 'Miguel', 'Ramirez', 'Navarro', '1992-04-16 22:40:00');
+INSERT INTO Estudiantes VALUES (16, 'Natalia', 'Ramirez', 'Delgado', '1991-05-17 23:50:00');
+INSERT INTO Estudiantes VALUES (17, 'Eduardo', 'Ramirez', 'Castillo', '1990-06-18 00:00:00');
+INSERT INTO Estudiantes VALUES (18, 'Sofia', 'Ramirez', 'Soto', '1989-07-19 01:10:00');
+INSERT INTO Estudiantes VALUES (19, 'Pablo', 'Ramirez', 'Salazar', '1988-08-20 02:20:00');
+INSERT INTO Estudiantes VALUES (20, 'Claudia', 'Ramirez', 'Reyes', '1987-09-21 03:30:00');
+INSERT INTO Estudiantes VALUES (21, 'Fernanda', 'Ramirez', 'Espinoza', '1986-10-22 04:40:00');
+INSERT INTO Estudiantes VALUES (22, 'Javier', 'Ramirez', 'Nunez', '1985-11-23 05:50:00');
+
+SELECT * FROM Estudiantes WHERE PrimerApellido LIKE *mire*;

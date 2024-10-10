@@ -12,7 +12,7 @@ namespace ApiInterface.Store
     private string? FileData;
     private string? Name;
     List<Dictionary<string, object>> Selected = new();
-    private DataPath? Path;
+    private DataPath? Path = null;
     private List<Table> Tables = new List<Table>();
 
     public void CreateTableAs(string name, string fields)
@@ -98,19 +98,19 @@ namespace ApiInterface.Store
     // el DataPath
     private bool DatabaseExists(string databaseName)
     {
-      return true;
+      return Path != null;
     }
 
     public string Database { get; private set; } = string.Empty;
 
-    public void DropTableIfEmpty(string tableName)
+    public void DropTable(string tableName)
     {
       if (string.IsNullOrWhiteSpace(tableName))
       {
         throw new ArgumentException("El nombre de la tabla no puede estar vacío.");
       }
 
-      if (string.IsNullOrWhiteSpace(Database))
+      if (string.IsNullOrWhiteSpace(Database) || Path == null)
       {
         throw new InvalidOperationException("No se ha establecido una base de datos de contexto.");
       }
@@ -121,18 +121,10 @@ namespace ApiInterface.Store
         throw new InvalidOperationException($"La tabla '{tableName}' no existe en la base de datos '{Database}'.");
       }
 
-      // Verificar si la tabla está vacía
-      if (IsTableEmpty(tableName))
-      {
-        // Eliminar la tabla
-        Console.WriteLine($"DROP TABLE {tableName}");
-        // Aquí iría la lógica real para eliminar la tabla
-        Console.WriteLine($"Tabla '{tableName}' eliminada exitosamente de la base de datos '{Database}'.");
-      }
-      else
-      {
-        Console.WriteLine($"La tabla '{tableName}' no está vacía y no se eliminará.");
-      }
+      // Eliminar la tabla
+      Console.WriteLine($"DROP TABLE {tableName}");
+      Path.Drop(tableName);
+      Console.WriteLine($"Tabla '{tableName}' eliminada exitosamente de la base de datos '{Database}'.");
     }
 
     private bool TableExists(string tableName)
@@ -306,177 +298,188 @@ namespace ApiInterface.Store
 
     public void Update(string tableName, Dictionary<string, object> setValues, string? whereClause = null)
     {
-        // Verificar si la tabla existe
-        Table? table = Tables.Find(t => t.Name == tableName);
-        if (table == null)
+      // Verificar si la tabla existe
+      Table? table = Tables.Find(t => t.Name == tableName);
+      if (table == null)
+      {
+        throw new ArgumentException($"La tabla '{tableName}' no existe.");
+      }
+
+      // Obtener todas las filas de la tabla
+      List<Dictionary<string, object>> rows = GetTableRows(table);
+
+      // Aplicar la cláusula WHERE si existe
+      if (!string.IsNullOrEmpty(whereClause))
+      {
+        rows = ApplyWhereClause(rows, whereClause, table);
+      }
+
+      // Actualizar las filas
+      foreach (var row in rows)
+      {
+        foreach (var kvp in setValues)
         {
-            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+          if (row.ContainsKey(kvp.Key))
+          {
+            row[kvp.Key] = kvp.Value;
+          }
         }
+      }
 
-        // Obtener todas las filas de la tabla
-        List<Dictionary<string, object>> rows = GetTableRows(table);
-
-        // Aplicar la cláusula WHERE si existe
-        if (!string.IsNullOrEmpty(whereClause))
+      // Actualizar índices si es necesario
+      foreach (var column in setValues.Keys)
+      {
+        if (table.HasIndex && table.IndexColumn == column)
         {
-            rows = ApplyWhereClause(rows, whereClause, table);
+          new Data().UpdateIndex(table, table.IndexColumn);
         }
+      }
 
-        // Actualizar las filas
-        foreach (var row in rows)
-        {
-            foreach (var kvp in setValues)
-            {
-                if (row.ContainsKey(kvp.Key))
-                {
-                    row[kvp.Key] = kvp.Value;
-                }
-            }
-        }
+      Console.WriteLine($"Se actualizaron {rows.Count} filas en la tabla '{tableName}'.");
 
-        // Actualizar índices si es necesario
-        foreach (var column in setValues.Keys)
-        {
-            if (table.HasIndex && table.IndexColumn == column)
-            {
-                new Data().UpdateIndex(table, table.IndexColumn);
-            }
-        }
-
-        Console.WriteLine($"Se actualizaron {rows.Count} filas en la tabla '{tableName}'.");
-
-        // Guardar los cambios en el archivo
-        SaveTable(tableName);
+      // Guardar los cambios en el archivo
+      SaveTable(tableName);
     }
 
     private void UpdateIndex(Table table, string column)
     {
-        // TODO: Implementar la actualización del índice
-        Console.WriteLine($"Actualizando el índice para la columna '{column}' en la tabla '{table.Name}'.");
+      // TODO: Implementar la actualización del índice
+      Console.WriteLine($"Actualizando el índice para la columna '{column}' en la tabla '{table.Name}'.");
     }
 
     private void SaveTable(string tableName)
     {
-        Table? table = Tables.Find(t => t.Name == tableName);
-        if (table != null && Path != null)
-        {
-            Path.SaveTableAs(tableName, table);
-        }
+      Table? table = Tables.Find(t => t.Name == tableName);
+      if (table != null && Path != null)
+      {
+        Path.SaveTableAs(tableName, table);
+      }
     }
 
     public void Delete(string tableName, string? whereClause = null)
     {
-        // Verificar si la tabla existe
-        Table? table = Tables.Find(t => t.Name == tableName);
-        if (table == null)
-        {
-            throw new ArgumentException($"La tabla '{tableName}' no existe.");
-        }
+      // Verificar si la tabla existe
+      Table? table = Tables.Find(t => t.Name == tableName);
+      if (table == null)
+      {
+        throw new ArgumentException($"La tabla '{tableName}' no existe.");
+      }
 
-        // Obtener todas las filas de la tabla
-        List<Dictionary<string, object>> rows = GetTableRows(table);
+      // Obtener todas las filas de la tabla
+      List<Dictionary<string, object>> rows = GetTableRows(table);
 
-        // Si hay una cláusula WHERE, aplicarla para filtrar las filas a eliminar
-        if (!string.IsNullOrEmpty(whereClause))
-        {
-            var rowsToDelete = ApplyWhereClause(rows, whereClause, table);
-            rows = rows.Except(rowsToDelete).ToList();
-        }
-        else
-        {
-            // Si no hay cláusula WHERE, eliminar todas las filas
-            rows.Clear();
-        }
+      // Si hay una cláusula WHERE, aplicarla para filtrar las filas a eliminar
+      if (!string.IsNullOrEmpty(whereClause))
+      {
+        var rowsToDelete = ApplyWhereClause(rows, whereClause, table);
+        rows = rows.Except(rowsToDelete).ToList();
+      }
+      else
+      {
+        // Si no hay cláusula WHERE, eliminar todas las filas
+        rows.Clear();
+      }
 
-        // Actualizar la tabla con las filas restantes
-        table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
+      // Actualizar la tabla con las filas restantes
+      table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
 
-        // Actualizar índices si es necesario
-        if (table.HasIndex)
-        {
-           UpdateIndex(table, table.IndexColumn);
-        }
+      // Actualizar índices si es necesario
+      if (table.HasIndex)
+      {
+        UpdateIndex(table, table.IndexColumn);
+      }
 
-        Console.WriteLine($"Se eliminaron {rows.Count} filas de la tabla '{tableName}'.");
+      Console.WriteLine($"Se eliminaron {rows.Count} filas de la tabla '{tableName}'.");
 
-        // Guardar los cambios en el archivo
-        SaveTable(tableName);
-    }   
-    
+      // Guardar los cambios en el archivo
+      SaveTable(tableName);
+    }
+
     public void Insert(string tableName, List<object> values)
     {
-        // Verificar si la tabla existe
-        Table? table = Tables.Find(t => t.Name == tableName);
-        if (table == null)
+      // Verificar si la tabla existe
+      Table? table = Tables.Find(t => t.Name == tableName);
+      if (table == null)
+      {
+        throw new ArgumentException($"La tabla '{tableName}' no existe.");
+      }
+
+      // Verificar si el número de valores coincide con el número de campos
+      if (values.Count != table.TableFields.Count)
+      {
+        throw new ArgumentException($"El número de valores ({values.Count}) no coincide con el número de campos en la tabla ({table.TableFields.Count}).");
+      }
+
+      // Crear un nuevo diccionario para la fila
+      Dictionary<string, object> newRow = new Dictionary<string, object>();
+
+      // Validar y asignar los valores a cada campo
+      for (int i = 0; i < table.TableFields.Count; i++)
+      {
+        Field field = table.TableFields[i];
+        object value = values[i];
+
+        // Validar el tipo de dato
+        switch (field.Type.ToUpper())
         {
-            throw new ArgumentException($"La tabla '{tableName}' no existe.");
+          case "INTEGER":
+            if (!int.TryParse(value.ToString(), out int intValue))
+              throw new ArgumentException($"El valor '{value}' no es válido para el campo INTEGER '{field.Name}'.");
+            newRow[field.Name] = intValue;
+            break;
+          case "DOUBLE":
+            if (!double.TryParse(value.ToString(), out double doubleValue))
+              throw new ArgumentException($"El valor '{value}' no es válido para el campo DOUBLE '{field.Name}'.");
+            newRow[field.Name] = doubleValue;
+            break;
+          case "DATETIME":
+            if (!DateTime.TryParse(value.ToString(), out DateTime dateTimeValue))
+              throw new ArgumentException($"El valor '{value}' no es válido para el campo DATETIME '{field.Name}'.");
+            newRow[field.Name] = dateTimeValue;
+            break;
+          case "VARCHAR":
+            string stringValue = value.ToString() ?? "";
+            if (field.Size.HasValue && stringValue.Length > field.Size.Value)
+              throw new ArgumentException($"El valor '{value}' excede la longitud máxima ({field.Size.Value}) para el campo VARCHAR '{field.Name}'.");
+            newRow[field.Name] = stringValue;
+            break;
+          default:
+            throw new ArgumentException($"Tipo de dato no soportado: {field.Type}");
         }
+      }
 
-        // Verificar si el número de valores coincide con el número de campos
-        if (values.Count != table.TableFields.Count)
-        {
-            throw new ArgumentException($"El número de valores ({values.Count}) no coincide con el número de campos en la tabla ({table.TableFields.Count}).");
-        }
+      // Agregar la nueva fila a la tabla
+      List<Dictionary<string, object>> rows = GetTableRows(table);
+      rows.Add(newRow);
 
-        // Crear un nuevo diccionario para la fila
-        Dictionary<string, object> newRow = new Dictionary<string, object>();
+      // Actualizar la tabla con la nueva fila
+      table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
 
-        // Validar y asignar los valores a cada campo
-        for (int i = 0; i < table.TableFields.Count; i++)
-        {
-            Field field = table.TableFields[i];
-            object value = values[i];
+      // Actualizar índices si es necesario
+      if (table.HasIndex)
+      {
+        UpdateIndex(table, table.IndexColumn);
+      }
 
-            // Validar el tipo de dato
-            switch (field.Type.ToUpper())
-            {
-                case "INTEGER":
-                    if (!int.TryParse(value.ToString(), out int intValue))
-                        throw new ArgumentException($"El valor '{value}' no es válido para el campo INTEGER '{field.Name}'.");
-                    newRow[field.Name] = intValue;
-                    break;
-                case "DOUBLE":
-                    if (!double.TryParse(value.ToString(), out double doubleValue))
-                        throw new ArgumentException($"El valor '{value}' no es válido para el campo DOUBLE '{field.Name}'.");
-                    newRow[field.Name] = doubleValue;
-                    break;
-                case "DATETIME":
-                    if (!DateTime.TryParse(value.ToString(), out DateTime dateTimeValue))
-                        throw new ArgumentException($"El valor '{value}' no es válido para el campo DATETIME '{field.Name}'.");
-                    newRow[field.Name] = dateTimeValue;
-                    break;
-                case "VARCHAR":
-                    string stringValue = value.ToString() ?? "";
-                    if (field.Size.HasValue && stringValue.Length > field.Size.Value)
-                        throw new ArgumentException($"El valor '{value}' excede la longitud máxima ({field.Size.Value}) para el campo VARCHAR '{field.Name}'.");
-                    newRow[field.Name] = stringValue;
-                    break;
-                default:
-                    throw new ArgumentException($"Tipo de dato no soportado: {field.Type}");
-            }
-        }
+      Console.WriteLine($"Se insertó una nueva fila en la tabla '{tableName}'.");
 
-        // Agregar la nueva fila a la tabla
-        List<Dictionary<string, object>> rows = GetTableRows(table);
-        rows.Add(newRow);
+      // Guardar los cambios en el archivo
+      SaveTable(tableName);
+    }
 
-        // Actualizar la tabla con la nueva fila
-        table.TableFields = rows.SelectMany(r => r.Select(kvp => new Field(kvp.Key, kvp.Value?.ToString() ?? string.Empty, null))).ToList();
-
-        // Actualizar índices si es necesario
-        if (table.HasIndex)
-        {
-            UpdateIndex(table, table.IndexColumn);
-        }
-
-        Console.WriteLine($"Se insertó una nueva fila en la tabla '{tableName}'.");
-
-        // Guardar los cambios en el archivo
-        SaveTable(tableName);
+    public void SetTableAs(string name)
+    {
+      Table? table = Path.LoadTable(name);
+      if (table != null)
+      {
+        Tables.Add(table);
+      }
+    }
+    public void SetDatabaseAs(string name)
+    { 
+      Path = new(name);
     }
   }
-
-
 
 
   /*
@@ -496,7 +499,7 @@ namespace ApiInterface.Store
       Directory.CreateDirectory(databasePath);
     }
 
-    public void SaveTableAs(string name, object data)
+    public void SaveTableAs(string name, Table data)
     {
       Table = name;
       string filePath = GetTableFilePath();
@@ -505,7 +508,7 @@ namespace ApiInterface.Store
       Console.WriteLine($"Tabla '{name}' guardada exitosamente en {filePath}");
     }
 
-    public T? LoadTable<T>(string name) where T : class
+    public Table? LoadTable(string name)
     {
       Table = name;
       string filePath = GetTableFilePath();
@@ -516,9 +519,16 @@ namespace ApiInterface.Store
       }
 
       string jsonData = File.ReadAllText(filePath);
-      T? loadedData = JsonSerializer.Deserialize<T>(jsonData);
+      Table? loadedData = JsonSerializer.Deserialize<Table>(jsonData);
       Console.WriteLine($"Tabla '{name}' cargada exitosamente desde {filePath}");
       return loadedData;
+    }
+
+    public void Drop(string name)
+    {
+      Table = name;
+      string path = GetTableFilePath();
+      File.Delete(path);
     }
 
     private string GetTableFilePath()

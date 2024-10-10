@@ -3,6 +3,7 @@
  *    (3) Completar la funcion que haga el parse de cada comando individual
  */
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 using ApiInterface.Models;
 using ApiInterface.Store;
 namespace ApiInterface.Parser
@@ -14,8 +15,11 @@ namespace ApiInterface.Parser
 
     public static OperationStatus Execute(string script)
     {
+      data = new();
       Sentences = AddSentences(script);
       OperationStatus result = OperationStatus.Success;
+      Stopwatch stopwatch = new();
+      Console.WriteLine(script);
       if (Sentences.Count == 0)
       {
         return OperationStatus.Error;
@@ -23,11 +27,15 @@ namespace ApiInterface.Parser
 
       foreach (string Sentence in Sentences)
       {
-        if (Sentence.Contains("(") || Sentence.Contains(")") && !HasCorrectParenthesis(Sentence))
+        Console.WriteLine($"PARSE: {Sentence}");
+        if ((Sentence.Contains("(") || Sentence.Contains(")")) && !HasCorrectParenthesis(Sentence))
         {
           return OperationStatus.Error;
         }
+        stopwatch.Start();
         result = Parse(Sentence);
+        stopwatch.Stop();
+        Console.WriteLine($"TIME: {stopwatch.ElapsedMilliseconds}");
         if (result == OperationStatus.Warning || result == OperationStatus.Error)
         {
           return result;
@@ -107,6 +115,7 @@ namespace ApiInterface.Parser
         }
 
         string databaseName = matchDatabaseName.Groups[1].Value;
+        data.CreateDatabase(databaseName);
       }
       else if (sentence.StartsWith("SET DATABASE"))
       {
@@ -119,6 +128,7 @@ namespace ApiInterface.Parser
         }
 
         string databaseName = matchDatabaseName.Groups[1].Value;
+        data.SetDatabaseAs(databaseName);
       }
       else if (sentence.StartsWith("CREATE TABLE"))
       {

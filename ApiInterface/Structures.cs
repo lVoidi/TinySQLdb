@@ -1,9 +1,3 @@
-/*
- * TODO: 
- *    (1) Hacer que CreateIndex reciba como argumento la columna de la tabla a la que se 
- *    va a aplicar el indice
- *    (2) Completar los arboles, con una funcion de busqueda incluida
- */
 using ApiInterface.Models;
 namespace ApiInterface.Structures
 {
@@ -20,13 +14,25 @@ namespace ApiInterface.Structures
       Size = size;
     }
   }
+
   internal class Table
   {
-    private IndexBinaryTree? Tree;
+    // Estos pasan a ser instancias de sus respectivas clases cuando 
+    // se llama CreateIndex
+    private IndexBTree? BTree = null;
+    private IndexBSTree? BSTree = null;
+
+    // Literalmente el nombre del archivo 
     public string Name;
+
+    // Se pone como verdadera cuando se crea el indice
     public bool HasIndex = false;
-    public string IndexColumn = "";
+
+    // Enum que dice que tipo de indice tiene la tabla 
     public TableIndex Index = TableIndex.None;
+
+    // Cada tabla tiene siempre su lista de Fields con sus respectivos 
+    // datos. Para cada insert, se agrega un field.
     public List<Field> TableFields;
 
     public Table(string name, List<Field> tableFields)
@@ -35,53 +41,66 @@ namespace ApiInterface.Structures
       TableFields = tableFields;
     }
 
-    public void Insert(string row)
+    // Este insert debe depender del tipo de indice
+    // 1. Si TableIndex == None:
+    //    se recorre tableFields
+    // 2. Si TableIndex == BTree:
+    //    se recorre el BTree 
+    // 3. Si no: 
+    //    se recorre BSTree
+    public void Insert()
     {
     }
 
-    public void Delete(string row)
+    public void Delete()
     {
     }
 
+    // Recorrer todos los fields de List<Field> e imprimirlos con 
+    // Console.WriteLine()
     public override string ToString()
     {
       return "";
     }
 
-    // TODO: (1)
     public void CreateIndex(TableIndex index)
     {
-      HasIndex = true;
-      if (index == TableIndex.BSTree)
+      if (index == TableIndex.None)
       {
-        Tree = new IndexBinaryTree();
+
+      }
+      else if (index == TableIndex.BTree)
+      {
+
       }
       else
       {
-        Tree = new IndexBSTree();
+
       }
     }
   }
 
-  internal class IndexTreeNode
+  internal class IndexBTreeNode
   {
-    public string? Data;
-    public int? Index;
   }
 
-  // TODO: (1) (2)
-  internal class IndexBinaryTree
+  internal class IndexBSTreeNode
   {
-    public IndexBinaryTree() { }
-    public virtual void Insert() { }
-    public virtual void Delete() { }
   }
-  // TODO: (1) (2)
-  internal class IndexBSTree : IndexBinaryTree
+
+  internal class IndexBTree
+  {
+    public IndexBTree() { }
+    public void Insert() { }
+    public void Delete() { }
+  }
+
+  // Esto debe ser un arbol AVL para que se balancee
+  internal class IndexBSTree
   {
     public IndexBSTree() { }
-    public override void Insert() { }
-    public override void Delete() { }
+    public void Insert() { }
+    public void Delete() { }
   }
 
 }
