@@ -103,6 +103,29 @@ namespace ApiInterface.Store
     {
       List<string> result = new List<string>();
 
+      if (whereClause.Contains("index"))
+      {
+        int index = 0;
+        string pattern = @"index\s*=\s*(\d+)";
+        Match match = Regex.Match(whereClause, pattern);
+        if (match.Success)
+        {
+          index = int.Parse(match.Groups[1].Value);
+        }
+        if (index > 0 && index < Table.TableFields.Count)
+        {
+          List<Field> row = Table.FindById(index);
+          foreach (Field field in row)
+          {
+            if (field.Name == selectedColumn || selectedColumn == "*")
+            {
+              result.Add(field.Value.ToString());
+              break;
+            }
+          }
+        }
+      }
+
       if (likeWord != null && whereClause != null)
       {
         Match match = Regex.Match(whereClause, @"(\w+)\s*LIKE\s*(\w+)");
@@ -141,10 +164,7 @@ namespace ApiInterface.Store
         {
           result = OrderBy(result, orderBy, isAscending);
         }
-        foreach (string line in result)
-        {
-          Console.WriteLine(line);
-        }
+        Console.WriteLine($"Result: {string.Join(", ", result)}");
       }
       else if (whereClause != null && whereValue != null)
       {
@@ -156,13 +176,13 @@ namespace ApiInterface.Store
         }
 
         string columnName = match.Groups[1].Value;
-        string value = whereValue;
+        string value = whereValue.Trim('\'', '\"');
 
         foreach (List<Field> row in Table.TableFields)
         {
           foreach (Field field in row)
           {
-            if (field.Name == columnName && field.Value.ToString().Equals(value) || field.Value.ToString().Contains(value))
+            if (field.Name == columnName && field.Value.ToString().Equals(value))
             {
               foreach (Field innerField in row)
               {
@@ -180,11 +200,8 @@ namespace ApiInterface.Store
           result = OrderBy(result, orderBy, isAscending);
         }
 
-        foreach (string line in result)
-        {
-          Console.WriteLine(line);
-        }
       }
+      Console.WriteLine($"Result: {string.Join(", ", result)}");
     }
 
     private List<string> OrderBy(List<string> result, string orderBy, bool isAscending)
