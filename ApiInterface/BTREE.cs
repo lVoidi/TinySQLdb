@@ -112,12 +112,12 @@ namespace ApiInterface.Structures
       y.InnerData.RemoveRange(t - 1, t);
     }
 
-    public Field Find(int key)
+    public List<Field> Find(int key)
     {
       return Search(root, key);
     }
 
-    private Field Search(IndexBTreeNode x, int key)
+    private List<Field> Search(IndexBTreeNode x, int key)
     {
       int i = 0;
       while (i < x.Keys.Count && key > x.Keys[i])
@@ -127,7 +127,7 @@ namespace ApiInterface.Structures
 
       if (i < x.Keys.Count && key == x.Keys[i])
       {
-        return x.InnerData[i];
+        return new List<Field> { x.InnerData[i] };
       }
 
       if (x.IsLeaf)
