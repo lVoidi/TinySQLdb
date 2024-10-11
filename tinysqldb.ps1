@@ -67,15 +67,15 @@ function Send-SQLCommand {
     Send-Message -client $client -message $jsonMessage
     $response = Receive-Message -client $client
 
-    Write-Host -ForegroundColor Green "Response received: $response"
+    Write-Host -ForegroundColor Green "Response received"
     
     if (-not [string]::IsNullOrWhiteSpace($response)) {
         $responseObject = ConvertFrom-Json -InputObject $response
         if ($responseObject.PSObject.Properties.Name -contains 'Status') {
             if ($responseObject.Status -eq '1') {
-                Write-Host -ForegroundColor Red $responseObject.Status
+                Write-Host -ForegroundColor Red $responseObject.ResponseBody $responseObject.Status
             } else {
-                Write-Host -ForegroundColor Green $responseObject.Status
+                Write-Host -ForegroundColor Green $responseObject.ResponseBody $responseObject.Status
             }
         } else {
             Write-Warning "El campo 'Status' no está presente en la respuesta JSON."

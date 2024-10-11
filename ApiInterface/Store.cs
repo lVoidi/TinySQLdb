@@ -175,14 +175,14 @@ namespace ApiInterface.Store
           throw new ArgumentException("La cláusula WHERE debe contener un operador de comparación.");
         }
 
-        string columnName = match.Groups[1].Value;
-        string value = whereValue.Trim('\'', '\"');
+        string columnName = match.Groups[1].Value.Replace(" ", "");
+        string value = whereValue.Trim('\'', '\"').Replace(" ", "");
 
         foreach (List<Field> row in Table.TableFields)
         {
           foreach (Field field in row)
           {
-            if (field.Name == columnName && field.Value.ToString().Equals(value))
+            if (field.Name.Contains(columnName) && field.Value.ToString().Contains(value))
             {
               foreach (Field innerField in row)
               {
